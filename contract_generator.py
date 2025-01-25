@@ -14,7 +14,7 @@ from num2words import num2words
 # Регистрируем системный шрифт с поддержкой кириллицы
 pdfmetrics.registerFont(TTFont('DejaVuSans', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
 pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'))
-pdfmetrics.registerFont(TTFont('DejaVuSans-Italic', 'DejaVuSans-Oblique'))
+pdfmetrics.registerFont(TTFont('DejaVuSans-Italic', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf'))
 
 # Добавим словарь с переводами текста договора
 CONTRACT_TRANSLATIONS = {

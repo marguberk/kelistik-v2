@@ -10,18 +10,21 @@ git clone https://github.com/marguberk/contract-generator.git
 cd contract-generator
 ```
 
-2. Создайте виртуальное окружение и активируйте его:
+2. Создайте виртуальное окружение и установите зависимости:
 ```bash
 python -m venv venv
 source venv/bin/activate  # для Linux/Mac
 # или
 venv\Scripts\activate  # для Windows
-```
-
-3. Установите зависимости:
-```bash
 pip install -r requirements.txt
 ```
+
+3. Создайте файл .env из примера:
+```bash
+cp .env.example .env
+```
+
+4. Настройте пути в .env файле под вашу систему
 
 4. Запустите приложение:
 ```bash

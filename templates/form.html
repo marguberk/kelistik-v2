@@ -21,7 +21,12 @@
                 </div>
                 <div>
                     {{ form.contractor_phone.label(class="block text-gray-700 text-sm font-bold mb-2", text=t.contractor_phone) }}
-                    {{ form.contractor_phone(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500") }}
+                    {{ form.contractor_phone(class="phone-input w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500", autocomplete="off", value="+7") }}
+                    {% if form.contractor_phone.errors %}
+                        {% for error in form.contractor_phone.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+                        {% endfor %}
+                    {% endif %}
                 </div>
                 <div>
                     {{ form.contractor_address.label(class="block text-gray-700 text-sm font-bold mb-2", text=t.contractor_address) }}
@@ -52,7 +57,12 @@
                 </div>
                 <div>
                     {{ form.client_phone.label(class="block text-gray-700 text-sm font-bold mb-2", text=t.client_phone) }}
-                    {{ form.client_phone(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500") }}
+                    {{ form.client_phone(class="phone-input w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500", autocomplete="off", value="+7") }}
+                    {% if form.client_phone.errors %}
+                        {% for error in form.client_phone.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+                        {% endfor %}
+                    {% endif %}
                 </div>
                 <div>
                     {{ form.client_address.label(class="block text-gray-700 text-sm font-bold mb-2", text=t.client_address) }}

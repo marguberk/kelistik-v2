@@ -104,5 +104,13 @@ def cleanup_old_files():
     except Exception as e:
         print(f"Error cleaning up files: {str(e)}")
 
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('404.html', t=g.translations, lang=g.lang), 404
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    return render_template('500.html', t=g.translations, lang=g.lang), 500
+
 if __name__ == '__main__':
-    app.run(debug=True) 
+    app.run() 

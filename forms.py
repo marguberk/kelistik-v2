@@ -4,6 +4,22 @@ from wtforms import StringField, TextAreaField, DecimalField, DateField, SelectF
 from wtforms.validators import DataRequired, Length, ValidationError, Email, Regexp
 from validators import validate_iin_bin, validate_phone, validate_iban
 
+class PhoneNumberValidator:
+    def __call__(self, form, field):
+        # Очищаем номер от всех символов кроме цифр и +
+        number = ''.join(c for c in field.data if c.isdigit() or c == '+')
+        
+        if not number.startswith('+7'):
+            raise ValidationError('Номер должен начинаться с +7')
+            
+        # Проверяем длину (должно быть 12 символов включая +7)
+        if len(number) != 12:
+            raise ValidationError('Номер должен содержать 11 цифр')
+        
+        # Проверяем что все символы после +7 - цифры
+        if not number[2:].isdigit():
+            raise ValidationError('Номер должен содержать только цифры после +7')
+
 class ContractForm(FlaskForm):
     # Данные исполнителя
     contractor_name = StringField(
@@ -24,15 +40,11 @@ class ContractForm(FlaskForm):
             Regexp(r'^\d{12}$', message=lambda: g.translations['validation_iin'])
         ])
     
-    def validate_contractor_phone(form, field):
-        is_valid, message = validate_phone(field.data)
-        if not is_valid:
-            raise ValidationError(message)
-    
-    contractor_phone = StringField(
+    contractor_phone = StringField('Телефон Исполнителя', 
+        render_kw={"type": "tel", "placeholder": "+7 (___) ___-__-__"},
         validators=[
-            DataRequired(),
-            Regexp(r'^\+7\d{10}$', message=lambda: g.translations['validation_phone'])
+            DataRequired(message='Это поле обязательно'),
+            PhoneNumberValidator()
         ])
     
     contractor_address = StringField('Адрес Исполнителя',
@@ -69,15 +81,11 @@ class ContractForm(FlaskForm):
             Regexp(r'^\d{12}$', message=lambda: g.translations['validation_iin'])
         ])
     
-    def validate_client_phone(form, field):
-        is_valid, message = validate_phone(field.data)
-        if not is_valid:
-            raise ValidationError(message)
-    
-    client_phone = StringField(
+    client_phone = StringField('Телефон Заказчика', 
+        render_kw={"type": "tel", "placeholder": "+7 (___) ___-__-__"},
         validators=[
-            DataRequired(),
-            Regexp(r'^\+7\d{10}$', message=lambda: g.translations['validation_phone'])
+            DataRequired(message='Это поле обязательно'),
+            PhoneNumberValidator()
         ])
     
     client_address = StringField('Адрес Заказчика',
@@ -86,9 +94,16 @@ class ContractForm(FlaskForm):
     # Данные услуги
     def get_service_choices():
         return [
-            ('web_design', g.translations['service_type_web']),
-            ('ui_ux', g.translations['service_type_ui']),
-            ('graphic_design', g.translations['service_type_graphic'])
+            ('web_design', g.translations.get('service_type_web')),
+            ('ui_ux', g.translations.get('service_type_ui')),
+            ('graphic_design', g.translations.get('service_type_graphic')),
+            ('programming', g.translations.get('service_type_programming')),
+            ('mobile_dev', g.translations.get('service_type_mobile')),
+            ('targeting', g.translations.get('service_type_targeting')),
+            ('seo', g.translations.get('service_type_seo')),
+            ('smm', g.translations.get('service_type_smm')),
+            ('copywriting', g.translations.get('service_type_copywriting')),
+            ('consulting', g.translations.get('service_type_consulting'))
         ]
 
     def get_prepayment_choices():
@@ -130,6 +145,14 @@ class ContractForm(FlaskForm):
 
     service_type = SelectField('Тип услуги', choices=get_service_choices, validators=[DataRequired()])
     service_description = TextAreaField(
+        render_kw={
+            "placeholder": "Подробно опишите, что будет сделано в рамках услуги. Например:\n" +
+                         "- Конкретные работы и их объем\n" +
+                         "- Технические требования и особенности\n" +
+                         "- Ожидаемые результаты\n" +
+                         "- Формат сдачи работ",
+            "rows": "6"
+        },
         validators=[
             DataRequired(message=lambda: g.translations['validation_required']),
             Length(

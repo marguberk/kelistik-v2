@@ -12,10 +12,10 @@ from reportlab.lib import colors
 from num2words import num2words
 from reportlab.pdfbase.pdfmetrics import registerFont
 
-# Регистрируем системные шрифты DejaVu
-pdfmetrics.registerFont(TTFont('DejaVuSans', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
-pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'))
-pdfmetrics.registerFont(TTFont('DejaVuSans-Italic', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf'))
+# Регистрируем шрифты
+pdfmetrics.registerFont(TTFont('Arial', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
+pdfmetrics.registerFont(TTFont('Arial-Bold', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'))
+pdfmetrics.registerFont(TTFont('Arial-Italic', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf'))
 
 # Добавим словарь с переводами текста договора
 CONTRACT_TRANSLATIONS = {
@@ -209,15 +209,18 @@ def generate_contract(data, lang='ru'):
     """
     translations = CONTRACT_TRANSLATIONS[lang]
     
-    filename = f'Договор_{datetime.now().strftime("%Y%m%d%H%M")}_{lang}'
-    if lang == 'kk':
-        filename = f'Келісімшарт_{datetime.now().strftime("%Y%m%d%H%M")}'
-    
-    pdf_path = f'static/contracts/{filename}.pdf'
+    # Создаем директорию если её нет
+    output_dir = os.path.join(os.path.dirname(__file__), 'static', 'contracts')
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+        
+    # Используем абсолютный путь для файла
+    filename = f'Договор_{datetime.now().strftime("%Y%m%d%H%M")}_{lang}.pdf'
+    output_path = os.path.join(output_dir, filename)
     
     # Создаем PDF документ
     doc = SimpleDocTemplate(
-        pdf_path,
+        output_path,
         pagesize=A4,
         rightMargin=2*cm,
         leftMargin=3*cm,
@@ -235,7 +238,7 @@ def generate_contract(data, lang='ru'):
     styles.add(ParagraphStyle(
         name='CustomTitle',
         parent=styles['Heading1'],
-        fontName='DejaVuSans-Bold',  # Используем жирный шрифт для заголовка
+        fontName='Arial-Bold',  # Используем жирный шрифт для заголовка
         alignment=TA_CENTER,
         fontSize=16,
         spaceAfter=30,
@@ -247,7 +250,7 @@ def generate_contract(data, lang='ru'):
     styles.add(ParagraphStyle(
         name='CustomText',
         parent=styles['Normal'],
-        fontName='DejaVuSans',
+        fontName='Arial',
         alignment=TA_JUSTIFY,
         fontSize=12,
         spaceAfter=12,
@@ -263,7 +266,7 @@ def generate_contract(data, lang='ru'):
     styles.add(ParagraphStyle(
         name='TermStyle',
         parent=styles['CustomText'],
-        fontName='DejaVuSans-Bold',  # Используем жирный шрифт
+        fontName='Arial-Bold',  # Используем жирный шрифт
         firstLineIndent=0,  # Убираем отступ первой строки для терминов
         spaceBefore=12,  # Увеличиваем отступ перед термином
     ))
@@ -272,16 +275,16 @@ def generate_contract(data, lang='ru'):
     styles.add(ParagraphStyle(
         name='CustomBold',
         parent=styles['CustomText'],
-        fontName='DejaVuSans-Bold',  # Нужно зарегистрировать жирный шрифт
+        fontName='Arial-Bold',  # Нужно зарегистрировать жирный шрифт
     ))
 
     # Регистрируем жирный и курсивный шрифты
-    pdfmetrics.registerFont(TTFont('DejaVuSans-Italic', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf'))
+    pdfmetrics.registerFont(TTFont('Arial-Italic', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf'))
     
     styles.add(ParagraphStyle(
         name='CustomHeading',
         parent=styles['Heading2'],
-        fontName='DejaVuSans',
+        fontName='Arial',
         fontSize=14,
         spaceAfter=12,
         spaceBefore=20,
@@ -294,7 +297,7 @@ def generate_contract(data, lang='ru'):
     styles.add(ParagraphStyle(
         name='DateStyle',
         parent=styles['Normal'],
-        fontName='DejaVuSans',
+        fontName='Arial',
         fontSize=12,
         spaceAfter=20,
         alignment=TA_CENTER
@@ -498,7 +501,7 @@ def generate_contract(data, lang='ru'):
     # Создаем PDF с передачей языка через doc
     doc.build(story, onFirstPage=add_page_number, onLaterPages=add_page_number)
     
-    return pdf_path
+    return output_path
 
 def get_service_type_name(service_type, lang='ru'):
     """Возвращает название типа услуги на нужном языке"""
@@ -549,7 +552,7 @@ def add_page_number(canvas, doc):
     Добавляет номер страницы
     """
     canvas.saveState()
-    canvas.setFont('DejaVuSans', 9)
+    canvas.setFont('Arial', 9)
     # Используем doc.lang для определения языка
     page_text = "Бет" if doc.lang == 'kk' else "Страница"
     canvas.drawRightString(

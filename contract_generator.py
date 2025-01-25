@@ -10,8 +10,9 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
 from reportlab.lib import colors
 from num2words import num2words
+from reportlab.pdfbase.pdfmetrics import registerFont
 
-# Регистрируем системный шрифт с поддержкой кириллицы
+# Регистрируем системные шрифты DejaVu
 pdfmetrics.registerFont(TTFont('DejaVuSans', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
 pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'))
 pdfmetrics.registerFont(TTFont('DejaVuSans-Italic', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf'))

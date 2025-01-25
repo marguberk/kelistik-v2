@@ -1,507 +1,428 @@
 import os
+import requests
+from io import BytesIO
 from datetime import datetime
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.units import cm, mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
 from reportlab.lib import colors
 from num2words import num2words
-from reportlab.pdfbase.pdfmetrics import registerFont
+# Добавляем импорт переводов
+from translations import CONTRACT_TRANSLATIONS
+from reportlab.pdfbase.ttfonts import TTFont
+import logging
+import sys
 
-# Регистрируем шрифты
-pdfmetrics.registerFont(TTFont('Arial', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
-pdfmetrics.registerFont(TTFont('Arial-Bold', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'))
-pdfmetrics.registerFont(TTFont('Arial-Italic', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf'))
+# Настраиваем логирование
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('contract_generator.log'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger(__name__)
 
-# Добавим словарь с переводами текста договора
-CONTRACT_TRANSLATIONS = {
-    'ru': {
-        'title': 'ДОГОВОР ОКАЗАНИЯ УСЛУГ',
-        'city': 'г. Алматы',
-        'client_intro': 'именуемый в дальнейшем «Заказчик»',
-        'contractor_intro': 'именуемый в дальнейшем «Исполнитель»',
-        'agreement_intro': 'заключили настоящий договор о нижеследующем:',
-        'terms_title': 'ТЕРМИНЫ И ОПРЕДЕЛЕНИЯ',
-        'terms_intro': 'В настоящем Договоре используются следующие термины:',
-        'terms': {
-            'services': ('Услуги', 'работы по созданию дизайна, выполняемые Исполнителем по заданию Заказчика.'),
-            'result': ('Результат работ', 'созданные Исполнителем дизайн-макеты, изображения, файлы и иные материалы.'),
-            'revisions': ('Правки', 'изменения, вносимые в Результат работ по запросу Заказчика в рамках согласованного количества итераций.'),
-            'stage': ('Этап работ', 'часть работ, после выполнения которой требуется согласование с Заказчиком.'),
-            'delay': ('Задержка', 'нарушение сроков выполнения обязательств любой из сторон.'),
-            'workday': ('Рабочий день', 'календарный день с понедельника по пятницу с 9:00 до 18:00, за исключением праздничных дней.')
-        },
-        'sections': {
-            'subject': '1. ПРЕДМЕТ ДОГОВОРА',
-            'payment': '2. СТОИМОСТЬ УСЛУГ И ПОРЯДОК РАСЧЕТОВ',
-            'rights': '3. ПРАВА И ОБЯЗАННОСТИ СТОРОН',
-            'delays': 'ЗАДЕРЖКИ',
-            'acceptance': '4. ПОРЯДОК СДАЧИ-ПРИЕМКИ РАБОТ',
-            'responsibility': '5. ОТВЕТСТВЕННОСТЬ СТОРОН',
-            'force_majeure': '6. ФОРС-МАЖОР',
-            'confidentiality': '7. КОНФИДЕНЦИАЛЬНОСТЬ',
-            'disputes': '8. РАЗРЕШЕНИЕ СПОРОВ',
-            'duration': '9. СРОК ДЕЙСТВИЯ ДОГОВОРА',
-            'ip_rights': '10. ПРАВА НА РЕЗУЛЬТАТЫ РАБОТ',
-            'details': '11. РЕКВИЗИТЫ И ПОДПИСИ СТОРОН'
-        },
-        'contract_text': {
-            'subject_1': '1.1. Исполнитель обязуется оказать услуги {service_type}: {description}',
-            'subject_2': '1.2. Срок выполнения работ: до {deadline}',
-            'subject_3': '1.3. Количество возможных правок: {revisions}',
-            
-            'payment_1': '2.1. Стоимость услуг составляет {price} ({price_in_words}).',
-            'payment_2': '2.2. Оплата производится в следующем порядке:',
-            'payment_3': '     - {percent}% предоплата ({amount} ({amount_in_words}))',
-            
-            'rights_contractor': '3.1. Исполнитель обязуется:',
-            'rights_contractor_1': '     - Выполнить работы качественно и в срок;',
-            'rights_contractor_2': '     - Внести правки в соответствии с согласованным количеством итераций;',
-            'rights_contractor_3': '     - Сохранять конфиденциальность информации, полученной от Заказчика.',
-            'rights_client': '3.2. Заказчик обязуется:',
-            'rights_client_1': '     - Предоставить необходимые материалы и информацию для выполнения работ;',
-            'rights_client_2': '     - Оплатить работы в соответствии с условиями договора;',
-            'rights_client_3': '     - Принять работы при их соответствии требованиям.',
-            
-            'delays_1': '1.1. Допустимая задержка для обеих сторон составляет {days} рабочих дней.',
-            'delays_2': '1.2. В случае превышения допустимой задержки:',
-            'delays_3': '- Сторона, допустившая задержку, обязана уведомить другую сторону;',
-            'delays_4': '- Стороны согласовывают новые сроки выполнения обязательств;',
-            'delays_5': '- При отсутствии согласования новых сроков, другая сторона вправе расторгнуть договор.',
-            
-            'acceptance_1': '4.1. По завершении работ Исполнитель направляет результаты Заказчику.',
-            'acceptance_2': '4.2. Заказчик в течение 3 рабочих дней принимает работы или направляет мотивированный отказ.',
-            'acceptance_3': '4.3. В случае мотивированного отказа стороны составляют двусторонний акт с перечнем необходимых доработок.',
-            
-            'responsibility_1': '5.1. Стороны освобождаются от ответственности за частичное или полное неисполнение обязательств по договору, если это неисполнение явилось следствием обстоятельств непреодолимой силы.',
-            
-            'force_majeure_1': '6.1. Стороны освобождаются от ответственности за неисполнение обязательств при возникновении форс-мажорных обстоятельств (войны, стихийные бедствия, изменения в законодательстве).',
-            'force_majeure_2': '6.2. Сторона, для которой создалась невозможность исполнения обязательств, обязана уведомить другую сторону в письменной форме в течение 5 дней.',
-            
-            'confidentiality_1': '7.1. Стороны обязуются сохранять конфиденциальность информации, полученной в ходе исполнения договора.',
-            'confidentiality_2': '7.2. Передача конфиденциальной информации третьим лицам возможна только с письменного согласия другой стороны.',
-            
-            'disputes_1': '8.1. Все споры решаются путем переговоров между сторонами.',
-            'disputes_2': '8.2. В случае невозможности разрешения споров путем переговоров, они подлежат рассмотрению в судебном порядке согласно законодательству РК.',
-            
-            'duration_1': '9.1. Договор вступает в силу с момента подписания и действует до полного исполнения сторонами своих обязательств.',
-            'duration_2': '9.2. Договор может быть расторгнут по соглашению сторон либо по основаниям, предусмотренным законодательством РК.',
-            
-            'details_contractor': 'ИСПОЛНИТЕЛЬ:',
-            'details_client': 'ЗАКАЗЧИК:',
-            'details_signature': '________________ (подпись)',
-            'details_iin': 'ИИН:',
-            'details_address': 'Адрес:',
-            'details_phone': 'Телефон:',
-            'details_bank': 'Банк:',
-            'details_iban': 'IBAN:',
-        },
-        'service_type_web': 'веб-дизайна',
-        'service_type_ui': 'UI/UX дизайна',
-        'service_type_graphic': 'графического дизайна',
-        'revisions_2': '2 правки',
-        'revisions_3': '3 правки',
-        'revisions_5': '5 правок',
-        'revisions_unlimited': 'без ограничений',
-        'from_one_side': 'с одной стороны',
-        'from_other_side': 'с другой стороны',
-    },
-    'kk': {
-        'title': 'ҚЫЗМЕТ КӨРСЕТУ ШАРТЫ',
-        'city': 'Алматы қ.',
-        'client_intro': 'бұдан әрі «Тапсырыс беруші» деп аталатын',
-        'contractor_intro': 'бұдан әрі «Орындаушы» деп аталатын',
-        'agreement_intro': 'төмендегілер туралы осы шартты жасасты:',
-        'terms_title': 'ТЕРМИНДЕР ЖӘНЕ АНЫҚТАМАЛАР',
-        'terms_intro': 'Осы Шартта келесі терминдер қолданылады:',
-        'terms': {
-            'services': ('Қызметтер', 'Тапсырыс берушінің тапсырмасы бойынша Орындаушы жасайтын дизайн жұмыстары.'),
-            'result': ('Жұмыс нәтижесі', 'Орындаушы жасаған дизайн-макеттер, суреттер, файлдар және басқа материалдар.'),
-            'revisions': ('Түзетулер', 'Келісілген итерациялар саны шеңберінде Тапсырыс берушінің сұрауы бойынша Жұмыс нәтижесіне енгізілетін өзгерістер.'),
-            'stage': ('Жұмыс кезеңі', 'орындалғаннан кейін Тапсырыс берушімен келісуді қажет ететін жұмыстың бір бөлігі.'),
-            'delay': ('Кешігу', 'тараптардың кез келгенінің міндеттемелерді орындау мерзімдерін бұзуы.'),
-            'workday': ('Жұмыс күні', 'мереке күндерін қоспағанда, дүйсенбіден жұмаға дейін сағат 9:00-ден 18:00-ге дейінгі күнтізбелік күн.')
-        },
-        'sections': {
-            'subject': '1. ШАРТТЫҢ МӘНІ',
-            'payment': '2. ҚЫЗМЕТТЕРДІҢ ҚҰНЫ ЖӘНЕ ЕСЕП АЙЫРЫСУ ТӘРТІБІ',
-            'rights': '3. ТАРАПТАРДЫҢ ҚҰҚЫҚТАРЫ МЕН МІNДЕТТЕРІ',
-            'delays': 'КЕШІГУЛЕР',
-            'acceptance': '4. ЖҰМЫСТЫ ТАПСЫРУ-ҚАБЫЛДАУ ТӘРТІБІ',
-            'responsibility': '5. ТАРАПТАРДЫҢ ЖАУАПКЕРШІЛІГІ',
-            'force_majeure': '6. ФОРС-МАЖОР',
-            'confidentiality': '7. ҚҰПИЯЛЫЛЫҚ',
-            'disputes': '8. ДАУЛАРДЫ ШЕШУ',
-            'duration': '9. ШАРТТЫҢ ҚОЛДАНЫЛУ МЕРЗІМІ',
-            'ip_rights': '10. ЖҰМЫС НӘТИЖЕЛЕРІНЕ ҚҰҚЫҚТАР',
-            'details': '11. ТАРАПТАРДЫҢ ДЕРЕКТЕМЕЛЕРІ ЖӘНЕ ҚОЛДАРЫ'
-        },
-        'contract_text': {
-            'subject_1': '1.1. Орындаушы {service_type} қызметтерін көрсетуге міндеттенеді: {description}',
-            'subject_2': '1.2. Жұмысты орындау мерзімі: {deadline} дейін',
-            'subject_3': '1.3. Мүмкін түзетулер саны: {revisions}',
-            
-            'payment_1': '2.1. Қызметтердің құны {price} ({price_in_words}) құрайды.',
-            'payment_2': '2.2. Төлем келесі тәртіппен жүргізіледі:',
-            'payment_3': '     - {percent}% алдын ала төлем ({amount} ({amount_in_words}))',
-            
-            'rights_contractor': '3.1. Орындаушы міндеттенеді:',
-            'rights_contractor_1': '     - Жұмысты сапалы және уақытылы орындау;',
-            'rights_contractor_2': '     - Келісілген итерациялар санына сәйкес түзетулер енгізу;',
-            'rights_contractor_3': '     - Тапсырыс берушіден алынған ақпараттың құпиялылығын сақтау.',
-            'rights_client': '3.2. Тапсырыс беруші міндеттенеді:',
-            'rights_client_1': '     - Жұмысты орындау үшін қажетті материалдар мен ақпаратты ұсыну;',
-            'rights_client_2': '     - Шарт талаптарына сәйкес жұмыс үшін төлем жасау;',
-            'rights_client_3': '     - Талаптарға сәйкес келген жағдайда жұмысты қабылдау.',
-            
-            'delays_1': '1.1. Екі тарап үшін де рұқсат етілген кешігу {days} жұмыс күнін құрайды.',
-            'delays_2': '1.2. Рұқсат етілген кешігуден асып кеткен жағдайда:',
-            'delays_3': '- Кешігуге жол берген тарап екінші тарапқа хабарлауға міндетті;',
-            'delays_4': '- Тараптар міндеттемелерді орындаудың жаңа мерзімдерін келіседі;',
-            'delays_5': '- Жаңа мерзімдер келісілмеген жағдайда, екінші тарап шартты бұзуға құқылы.',
-            
-            'acceptance_1': '4.1. Жұмыс аяқталғаннан кейін Орындаушы нәтижелерді Тапсырыс берушіге жібереді.',
-            'acceptance_2': '4.2. Тапсырыс беруші 3 жұмыс күні ішінде жұмысты қабылдайды немесе дәлелді бас тартуды жібереді.',
-            'acceptance_3': '4.3. Дәлелді бас тарту жағдайында тараптар қажетті пысықтаулар тізімі бар екіжақты акт жасайды.',
-            
-            'responsibility_1': '5.1. Тараптар шарт бойынша міндеттемелерді ішінара немесе толық орындамағаны үшін жауапкершіліктен босатылады, егер бұл орындамау еңсерілмейтін күш жағдайларының салдары болса.',
-            
-            'force_majeure_1': '6.1. Тараптар форс-мажорлық жағдайлар (соғыс, табиғи апаттар, заңнамадағы өзгерістер) туындаған кезде міндеттемелерді орындамағаны үшін жауапкершіліктен босатылады.',
-            'force_majeure_2': '6.2. Міндеттемелерді орындау мүмкін болмаған тарап екінші тарапқа 5 күн ішінде жазбаша түрде хабарлауға міндетті.',
-            
-            'confidentiality_1': '7.1. Тараптар шартты орындау барысында алынған ақпараттың құпиялылығын сақтауға міндеттенеді.',
-            'confidentiality_2': '7.2. Құпия ақпаратты үшінші тұлғаларға беру екінші тараптың жазбаша келісімімен ғана мүмкін.',
-            
-            'disputes_1': '8.1. Барлық даулар тараптар арасындағы келіссөздер арқылы шешіледі.',
-            'disputes_2': '8.2. Дауларды келіссөздер арқылы шешу мүмкін болмаған жағдайда, олар ҚР заңнамасына сәйкес сот тәртібімен қаралуға жатады.',
-            
-            'duration_1': '9.1. Шарт қол қойылған сәттен бастап күшіне енеді және тараптар өз міндеттемелерін толық орындағанға дейін қолданылады.',
-            'duration_2': '9.2. Шарт тараптардың келісімі бойынша немесе ҚР заңнамасында көзделген негіздер бойынша бұзылуы мүмкін.',
-            
-            'details_contractor': 'ОРЫНДАУШЫ:',
-            'details_client': 'ТАПСЫРЫС БЕРУШІ:',
-            'details_signature': '________________ (қолы)',
-            'details_iin': 'ЖСН:',
-            'details_address': 'Мекенжайы:',
-            'details_phone': 'Телефон:',
-            'details_bank': 'Банк:',
-            'details_iban': 'IBAN:',
-        },
-        'service_type_web': 'веб-дизайн қызметтері',
-        'service_type_ui': 'UI/UX дизайн қызметтері',
-        'service_type_graphic': 'графикалық дизайн қызметтері',
-        'revisions_2': '2 түзету',
-        'revisions_3': '3 түзету',
-        'revisions_5': '5 түзету',
-        'revisions_unlimited': 'шектеусіз',
-        'from_one_side': 'бір жағынан',
-        'from_other_side': 'екінші жағынан',
-    }
+# URL для скачивания шрифтов Roboto
+FONT_URLS = {
+    'regular': 'https://github.com/googlefonts/roboto-2/raw/main/src/hinted/Roboto-Regular.ttf',
+    'bold': 'https://github.com/googlefonts/roboto-2/raw/main/src/hinted/Roboto-Bold.ttf',
+    'italic': 'https://github.com/googlefonts/roboto-2/raw/main/src/hinted/Roboto-Italic.ttf',
+    'bolditalic': 'https://github.com/googlefonts/roboto-2/raw/main/src/hinted/Roboto-BoldItalic.ttf'
 }
+
+def download_and_register_fonts():
+    """Скачивает и регистрирует шрифты Roboto"""
+    logger.info("Начало загрузки и регистрации шрифтов")
+    font_dir = os.path.join(os.path.dirname(__file__), '.fonts')
+    os.makedirs(font_dir, exist_ok=True)
+    
+    for style, url in FONT_URLS.items():
+        font_path = os.path.join(font_dir, f'Roboto-{style}.ttf')
+        logger.info(f"Обработка шрифта {style}")
+        
+        # Скачиваем шрифт, если его нет
+        if not os.path.exists(font_path):
+            try:
+                logger.info(f"Загрузка шрифта {style} с URL: {url}")
+                response = requests.get(url, timeout=10)
+                response.raise_for_status()
+                with open(font_path, 'wb') as f:
+                    f.write(response.content)
+                logger.info(f"Шрифт {style} успешно загружен")
+            except Exception as e:
+                logger.error(f"Ошибка при загрузке шрифта {style}: {e}")
+                continue
+        
+        # Регистрируем шрифт
+        font_name = f'Roboto-{style}'
+        try:
+            pdfmetrics.registerFont(TTFont(font_name, font_path))
+            logger.info(f"Шрифт {font_name} успешно зарегистрирован")
+        except Exception as e:
+            logger.error(f"Ошибка при регистрации шрифта {style}: {e}")
+
+# Скачиваем и регистрируем шрифты при запуске
+download_and_register_fonts()
+
+# Обновляем стили для использования Roboto
+def create_styles():
+    styles = getSampleStyleSheet()
+    
+    styles.add(ParagraphStyle(
+        name='CustomTitle',
+        parent=styles['Heading1'],
+        fontName='Roboto-bold',
+        alignment=TA_CENTER,
+        fontSize=16,
+        spaceAfter=30,
+        spaceBefore=30,
+        leading=24,
+    ))
+
+    styles.add(ParagraphStyle(
+        name='CustomText',
+        parent=styles['Normal'],
+        fontName='Roboto-regular',
+        alignment=TA_JUSTIFY,
+        fontSize=12,
+        spaceBefore=6,
+        spaceAfter=6,
+        leading=14,
+    ))
+
+    styles.add(ParagraphStyle(
+        name='TermStyle',
+        parent=styles['CustomText'],
+        fontName='Roboto-bold',
+        firstLineIndent=0,
+        spaceBefore=12,
+        spaceAfter=6,
+    ))
+
+    styles.add(ParagraphStyle(
+        name='CustomBold',
+        parent=styles['CustomText'],
+        fontName='Roboto-bold',
+    ))
+
+    styles.add(ParagraphStyle(
+        name='CustomHeading',
+        parent=styles['Heading2'],
+        fontName='Roboto-bold',
+        fontSize=14,
+        spaceAfter=12,
+        spaceBefore=12,
+        leading=16,
+    ))
+
+    styles.add(ParagraphStyle(
+        name='DateStyle',
+        parent=styles['Normal'],
+        fontName='Roboto-regular',
+        fontSize=12,
+        spaceAfter=20,
+        alignment=TA_CENTER,
+    ))
+
+    return styles
+
+# В функции add_page_number меняем шрифт
+def add_page_number(canvas, doc):
+    canvas.saveState()
+    canvas.setFont('Roboto-regular', 9)
+    page_text = "Бет" if doc.lang == 'kk' else "Страница"
+    canvas.drawRightString(
+        doc.pagesize[0] - doc.rightMargin,
+        doc.bottomMargin/2,
+        f"{page_text} {doc.page}"
+    )
+    canvas.restoreState()
 
 def generate_contract(data, lang='ru'):
     """
     Генерирует договор в формате PDF на указанном языке
     """
-    translations = CONTRACT_TRANSLATIONS[lang]
+    logger.info(f"Начало генерации договора на языке: {lang}")
+    logger.info(f"Полученные данные: {data}")
     
-    # Создаем директорию если её нет
-    output_dir = os.path.join(os.path.dirname(__file__), 'static', 'contracts')
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+    try:
+        translations = CONTRACT_TRANSLATIONS[lang]
+        logger.info("Переводы успешно загружены")
         
-    # Используем абсолютный путь для файла
-    filename = f'Договор_{datetime.now().strftime("%Y%m%d%H%M")}_{lang}.pdf'
-    output_path = os.path.join(output_dir, filename)
-    
-    # Создаем PDF документ
-    doc = SimpleDocTemplate(
-        output_path,
-        pagesize=A4,
-        rightMargin=2*cm,
-        leftMargin=3*cm,
-        topMargin=2*cm,
-        bottomMargin=2*cm
-    )
-    
-    # Добавляем язык в объект doc для использования в add_page_number
-    doc.lang = lang
-    
-    # Создаем стили с указанием шрифта и поддержкой HTML
-    styles = getSampleStyleSheet()
-    
-    # Добавляем стиль для заголовка
-    styles.add(ParagraphStyle(
-        name='CustomTitle',
-        parent=styles['Heading1'],
-        fontName='Arial-Bold',  # Используем жирный шрифт для заголовка
-        alignment=TA_CENTER,
-        fontSize=16,
-        spaceAfter=30,
-        spaceBefore=30,
-        leading=24,  # Межстрочный интервал
-    ))
-    
-    # Обновляем стиль для основного текста с поддержкой HTML
-    styles.add(ParagraphStyle(
-        name='CustomText',
-        parent=styles['Normal'],
-        fontName='Arial',
-        alignment=TA_JUSTIFY,
-        fontSize=12,
-        spaceAfter=12,
-        leading=18,  # Межстрочный интервал
-        firstLineIndent=20,  # Отступ первой строки
-        allowWidows=0,  # Запрет висячих строк
-        allowOrphans=0,
-        wordWrap='CJK',  # Улучшенный перенос слов
-        spaceBefore=6,  # Добавляем отступ перед параграфом
-    ))
+        # Проверяем наличие всех необходимых ключей в переводах
+        required_keys = ['title', 'city', 'client_intro', 'contractor_intro', 'from_one_side', 
+                        'from_other_side', 'agreement_intro', 'terms', 'sections', 'contract_text']
+        missing_keys = [key for key in required_keys if key not in translations]
+        if missing_keys:
+            logger.error(f"Отсутствуют следующие ключи в переводах: {missing_keys}")
+            raise KeyError(f"Missing required translation keys: {missing_keys}")
+        
+        # Проверяем наличие всех необходимых ключей в contract_text
+        required_contract_keys = ['subject_1', 'subject_2', 'subject_3', 'payment_1', 'payment_2', 
+                                'payment_3', 'rights_contractor', 'rights_client']
+        missing_contract_keys = [key for key in required_contract_keys 
+                               if key not in translations.get('contract_text', {})]
+        if missing_contract_keys:
+            logger.error(f"Отсутствуют следующие ключи в contract_text: {missing_contract_keys}")
+            raise KeyError(f"Missing required contract_text keys: {missing_contract_keys}")
+        
+        # Проверяем функции форматирования
+        try:
+            service_type = get_service_type_name(data["service_type"], lang)
+            logger.info(f"Тип услуги определен: {service_type}")
+            
+            revisions = get_revisions_text(data["revisions_count"], lang)
+            logger.info(f"Текст о правках определен: {revisions}")
+            
+            price_text = number_to_words_ru(data["price"], lang)
+            logger.info(f"Сумма прописью: {price_text}")
+        except Exception as e:
+            logger.error(f"Ошибка при форматировании данных: {str(e)}", exc_info=True)
+            raise
+        
+        # Создаем директорию если её нет
+        output_dir = os.path.join(os.path.dirname(__file__), 'static', 'contracts')
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+            logger.info(f"Создана директория: {output_dir}")
+        
+        # Используем абсолютный путь для файла
+        filename = f'Договор_{datetime.now().strftime("%Y%m%d%H%M")}_{lang}.pdf'
+        output_path = os.path.join(output_dir, filename)
+        logger.info(f"Путь для сохранения файла: {output_path}")
 
-    # Добавляем стиль для жирного текста
-    styles.add(ParagraphStyle(
-        name='TermStyle',
-        parent=styles['CustomText'],
-        fontName='Arial-Bold',  # Используем жирный шрифт
-        firstLineIndent=0,  # Убираем отступ первой строки для терминов
-        spaceBefore=12,  # Увеличиваем отступ перед термином
-    ))
-
-    # Стиль для жирного текста
-    styles.add(ParagraphStyle(
-        name='CustomBold',
-        parent=styles['CustomText'],
-        fontName='Arial-Bold',  # Нужно зарегистрировать жирный шрифт
-    ))
-
-    # Регистрируем жирный и курсивный шрифты
-    pdfmetrics.registerFont(TTFont('Arial-Italic', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf'))
-    
-    styles.add(ParagraphStyle(
-        name='CustomHeading',
-        parent=styles['Heading2'],
-        fontName='Arial',
-        fontSize=14,
-        spaceAfter=12,
-        spaceBefore=20,
-        leading=20,
-        textColor=colors.black,
-        backColor=colors.white
-    ))
-    
-    # Добавляем стиль для даты
-    styles.add(ParagraphStyle(
-        name='DateStyle',
-        parent=styles['Normal'],
-        fontName='Arial',
-        fontSize=12,
-        spaceAfter=20,
-        alignment=TA_CENTER
-    ))
-    
-    # Формируем содержимое
-    story = []
-    
-    # Заголовок
-    story.append(Paragraph(
-        f'{translations["title"]} № {datetime.now().strftime("%Y%m%d%H%M")}',
-        styles['CustomTitle']
-    ))
-    
-    # Создаем таблицу для даты и города
-    date_data = [[
-        Paragraph(translations['city'], styles['CustomText']),
-        Paragraph(datetime.now().strftime("%d.%m.%Y"), styles['CustomText'])
-    ]]
-    
-    date_table = Table(date_data, colWidths=[doc.width/2, doc.width/2])
-    date_table.setStyle(TableStyle([
-        ('ALIGN', (0, 0), (0, 0), 'LEFT'),
-        ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-    ]))
-    
-    story.append(date_table)
-    story.append(Spacer(1, 12))
-    
-    # Преамбула
-    preamble = (
-        f'{data["client_name"]}, {translations["client_intro"]}, '
-        f'{translations["contract_text"]["details_iin"]} {data["client_iin"]}, '
-        f'{translations["contract_text"]["details_address"]} {data["client_address"]}, '
-        f'{translations["contract_text"]["details_phone"]} {data["client_phone"]}, '
-        f'{translations["from_one_side"]}, '
-        f'{data["contractor_name"]}, {translations["contractor_intro"]}, '
-        f'{translations["contract_text"]["details_iin"]} {data["contractor_iin"]}, '
-        f'{translations["contract_text"]["details_address"]} {data["contractor_address"]}, '
-        f'{translations["contract_text"]["details_phone"]} {data["contractor_phone"]}, '
-        f'{translations["from_other_side"]}, '
-        f'{translations["agreement_intro"]}'
-    )
-    story.append(Paragraph(preamble, styles['CustomText']))
-    
-    # Добавляем определения терминов с правильным форматированием
-    story.append(Paragraph(translations['terms_title'], styles['CustomHeading']))
-    story.append(Paragraph(translations['terms_intro'], styles['CustomText']))
-    
-    terms = [
-        translations['terms']['services'],
-        translations['terms']['result'],
-        translations['terms']['revisions'],
-        translations['terms']['stage'],
-        translations['terms']['delay'],
-        translations['terms']['workday']
-    ]
-
-    for term, definition in terms:
+        # Создаем PDF документ
+        doc = SimpleDocTemplate(
+            output_path,
+            pagesize=A4,
+            rightMargin=2*cm,
+            leftMargin=3*cm,
+            topMargin=2*cm,
+            bottomMargin=2*cm
+        )
+        
+        # Добавляем язык в объект doc для использования в add_page_number
+        doc.lang = lang
+        
+        # Создаем стили
+        styles = create_styles()
+        logger.info("Стили созданы успешно")
+        
+        # Формируем содержимое
+        story = []
+        
+        logger.info("Начало формирования содержимого")
+        
+        # Заголовок
+        logger.info("Добавление заголовка")
         story.append(Paragraph(
-            f'<b>{term}</b> – {definition}',  # Только термин жирным
-            styles['CustomText']  # Используем обычный стиль
+            f'{translations["title"]} № {datetime.now().strftime("%Y%m%d%H%M")}',
+            styles['CustomTitle']
         ))
-        story.append(Spacer(1, 6))
-    
-    # Разделы договора с форматированием
-    story.append(Paragraph(translations['sections']['subject'], styles['CustomHeading']))
-    story.append(Paragraph(
-        translations['contract_text']['subject_1'].format(
-            service_type=get_service_type_name(data["service_type"], lang),
-            description=data["service_description"]
-        ),
-        styles['CustomText']
-    ))
-    story.append(Paragraph(
-        translations['contract_text']['subject_2'].format(
-            deadline=data["deadline"].strftime("%d.%m.%Y")
-        ),
-        styles['CustomText']
-    ))
-    story.append(Paragraph(
-        translations['contract_text']['subject_3'].format(
-            revisions=get_revisions_text(data["revisions_count"], lang)
-        ),
-        styles['CustomText']
-    ))
-    
-    story.append(Paragraph(translations['sections']['payment'], styles['CustomHeading']))
-    story.append(Paragraph(
-        translations['contract_text']['payment_1'].format(
-            price=data["price"],
-            price_in_words=number_to_words_ru(data["price"], lang)
-        ),
-        styles['CustomText']
-    ))
-    story.append(Paragraph(translations['contract_text']['payment_2'], styles['CustomText']))
-    
-    prepayment_amount = float(data["price"]) * float(data["prepayment_percent"].strip("%")) / 100
-    story.append(Paragraph(
-        translations['contract_text']['payment_3'].format(
-            percent=data["prepayment_percent"].strip("%"),
-            amount=prepayment_amount,
-            amount_in_words=number_to_words_ru(prepayment_amount, lang)
-        ),
-        styles['CustomText']
-    ))
-    
-    story.append(Paragraph(translations['sections']['rights'], styles['CustomHeading']))
-    story.append(Paragraph(translations['contract_text']['rights_contractor'], styles['CustomText']))
-    story.append(Paragraph(translations['contract_text']['rights_contractor_1'], styles['CustomText']))
-    story.append(Paragraph(translations['contract_text']['rights_contractor_2'], styles['CustomText']))
-    story.append(Paragraph(translations['contract_text']['rights_contractor_3'], styles['CustomText']))
-    
-    story.append(Paragraph(translations['contract_text']['rights_client'], styles['CustomText']))
-    story.append(Paragraph(translations['contract_text']['rights_client_1'], styles['CustomText']))
-    story.append(Paragraph(translations['contract_text']['rights_client_2'], styles['CustomText']))
-    story.append(Paragraph(translations['contract_text']['rights_client_3'], styles['CustomText']))
-    
-    # Добавляем раздел про задержки
-    story.append(Paragraph(translations['sections']['delays'], styles['CustomHeading']))
-    story.append(Paragraph(
-        translations['contract_text']['delays_1'].format(days=data["client_delay_days"]),
-        styles['CustomText']
-    ))
-    story.append(Paragraph(translations['contract_text']['delays_2'], styles['CustomText']))
-    story.append(Paragraph(translations['contract_text']['delays_3'], styles['CustomText']))
-    story.append(Paragraph(translations['contract_text']['delays_4'], styles['CustomText']))
-    story.append(Paragraph(translations['contract_text']['delays_5'], styles['CustomText']))
+        
+        logger.info("Создание преамбулы")
+        # Создаем таблицу для даты и города
+        date_data = [[
+            Paragraph(translations['city'], styles['CustomText']),
+            Paragraph(datetime.now().strftime("%d.%m.%Y"), styles['CustomText'])
+        ]]
+        
+        date_table = Table(date_data, colWidths=[doc.width/2, doc.width/2])
+        date_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+            ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        
+        story.append(date_table)
+        story.append(Spacer(1, 12))
+        
+        # Преамбула
+        preamble = (
+            f'{data["client_name"]}, {translations["client_intro"]}, '
+            f'{translations["contract_text"]["details_iin"]} {data["client_iin"]}, '
+            f'{translations["contract_text"]["details_address"]} {data["client_address"]}, '
+            f'{translations["contract_text"]["details_phone"]} {data["client_phone"]}, '
+            f'{translations["from_one_side"]}, '
+            f'{data["contractor_name"]}, {translations["contractor_intro"]}, '
+            f'{translations["contract_text"]["details_iin"]} {data["contractor_iin"]}, '
+            f'{translations["contract_text"]["details_address"]} {data["contractor_address"]}, '
+            f'{translations["contract_text"]["details_phone"]} {data["contractor_phone"]}, '
+            f'{translations["from_other_side"]}, '
+            f'{translations["agreement_intro"]}'
+        )
+        story.append(Paragraph(preamble, styles['CustomText']))
+        
+        # Добавляем определения терминов с правильным форматированием
+        story.append(Paragraph(translations['terms_title'], styles['CustomHeading']))
+        story.append(Paragraph(translations['terms_intro'], styles['CustomText']))
+        
+        terms = [
+            translations['terms']['services'],
+            translations['terms']['result'],
+            translations['terms']['revisions'],
+            translations['terms']['stage'],
+            translations['terms']['delay'],
+            translations['terms']['workday']
+        ]
 
-    # Порядок сдачи-приемки работ
-    story.append(Paragraph(translations['sections']['acceptance'], styles['CustomHeading']))
-    story.append(Paragraph(translations['contract_text']['acceptance_1'], styles['CustomText']))
-    story.append(Paragraph(translations['contract_text']['acceptance_2'], styles['CustomText']))
-    story.append(Paragraph(translations['contract_text']['acceptance_3'], styles['CustomText']))
-    
-    # Ответственность сторон
-    story.append(Paragraph(translations['sections']['responsibility'], styles['CustomHeading']))
-    story.append(Paragraph(translations['contract_text']['responsibility_1'], styles['CustomText']))
-    
-    # Форс-мажор
-    story.append(Paragraph(translations['sections']['force_majeure'], styles['CustomHeading']))
-    story.append(Paragraph(translations['contract_text']['force_majeure_1'], styles['CustomText']))
-    story.append(Paragraph(translations['contract_text']['force_majeure_2'], styles['CustomText']))
-    
-    # Конфиденциальность
-    story.append(Paragraph(translations['sections']['confidentiality'], styles['CustomHeading']))
-    story.append(Paragraph(translations['contract_text']['confidentiality_1'], styles['CustomText']))
-    story.append(Paragraph(translations['contract_text']['confidentiality_2'], styles['CustomText']))
-    
-    # Разрешение споров
-    story.append(Paragraph(translations['sections']['disputes'], styles['CustomHeading']))
-    story.append(Paragraph(translations['contract_text']['disputes_1'], styles['CustomText']))
-    story.append(Paragraph(translations['contract_text']['disputes_2'], styles['CustomText']))
-    
-    # Срок действия договора
-    story.append(Paragraph(translations['sections']['duration'], styles['CustomHeading']))
-    story.append(Paragraph(translations['contract_text']['duration_1'], styles['CustomText']))
-    story.append(Paragraph(translations['contract_text']['duration_2'], styles['CustomText']))
-    
-    story.append(Paragraph(translations['sections']['ip_rights'], styles['CustomHeading']))
-    story.append(Paragraph(get_intellectual_rights_text(data["intellectual_rights"], data["portfolio_rights"], lang), styles['CustomText']))
-    
-    # Реквизиты и подписи
-    story.append(Paragraph(translations['sections']['details'], styles['CustomHeading']))
-    story.append(Spacer(1, 20))  # Увеличиваем отступ перед таблицей
+        for term, definition in terms:
+            story.append(Paragraph(
+                f'<b>{term}</b> – {definition}',  # Только термин жирным
+                styles['CustomText']  # Используем обычный стиль
+            ))
+            story.append(Spacer(1, 6))
+        
+        # Разделы договора с форматированием
+        story.append(Paragraph(translations['sections']['subject'], styles['CustomHeading']))
+        story.append(Paragraph(
+            translations['contract_text']['subject_1'].format(
+                service_type=service_type,
+                description=data["service_description"]
+            ),
+            styles['CustomText']
+        ))
+        story.append(Paragraph(
+            translations['contract_text']['subject_2'].format(
+                deadline=data["deadline"].strftime("%d.%m.%Y")
+            ),
+            styles['CustomText']
+        ))
+        story.append(Paragraph(
+            translations['contract_text']['subject_3'].format(
+                revisions=revisions
+            ),
+            styles['CustomText']
+        ))
+        
+        story.append(Paragraph(translations['sections']['payment'], styles['CustomHeading']))
+        story.append(Paragraph(
+            translations['contract_text']['payment_1'].format(
+                price=data["price"],
+                price_in_words=price_text
+            ),
+            styles['CustomText']
+        ))
+        story.append(Paragraph(translations['contract_text']['payment_2'], styles['CustomText']))
+        
+        prepayment_amount = float(data["price"]) * float(data["prepayment_percent"].strip("%")) / 100
+        story.append(Paragraph(
+            translations['contract_text']['payment_3'].format(
+                percent=data["prepayment_percent"].strip("%"),
+                amount=prepayment_amount,
+                amount_in_words=number_to_words_ru(prepayment_amount, lang)
+            ),
+            styles['CustomText']
+        ))
+        
+        story.append(Paragraph(translations['sections']['rights'], styles['CustomHeading']))
+        story.append(Paragraph(translations['contract_text']['rights_contractor'], styles['CustomText']))
+        story.append(Paragraph(translations['contract_text']['rights_contractor_1'], styles['CustomText']))
+        story.append(Paragraph(translations['contract_text']['rights_contractor_2'], styles['CustomText']))
+        story.append(Paragraph(translations['contract_text']['rights_contractor_3'], styles['CustomText']))
+        
+        story.append(Paragraph(translations['contract_text']['rights_client'], styles['CustomText']))
+        story.append(Paragraph(translations['contract_text']['rights_client_1'], styles['CustomText']))
+        story.append(Paragraph(translations['contract_text']['rights_client_2'], styles['CustomText']))
+        story.append(Paragraph(translations['contract_text']['rights_client_3'], styles['CustomText']))
+        
+        # Добавляем раздел про задержки
+        story.append(Paragraph(translations['sections']['delays'], styles['CustomHeading']))
+        story.append(Paragraph(
+            translations['contract_text']['delays_1'].format(days=data["client_delay_days"]),
+            styles['CustomText']
+        ))
+        story.append(Paragraph(translations['contract_text']['delays_2'], styles['CustomText']))
+        story.append(Paragraph(translations['contract_text']['delays_3'], styles['CustomText']))
+        story.append(Paragraph(translations['contract_text']['delays_4'], styles['CustomText']))
+        story.append(Paragraph(translations['contract_text']['delays_5'], styles['CustomText']))
 
-    # Создаем таблицу для реквизитов
-    contractor_data = [
-        [Paragraph(translations['contract_text']['details_contractor'], styles['CustomText']), 
-         Paragraph(translations['contract_text']['details_client'], styles['CustomText'])],
-        [Paragraph(f'''<b>{data["contractor_name"]}</b><br/>
-                      <b>{translations['contract_text']['details_iin']}</b> {data["contractor_iin"]}<br/>
-                      <b>{translations['contract_text']['details_address']}</b> {data["contractor_address"]}<br/>
-                      <b>{translations['contract_text']['details_phone']}</b> {data["contractor_phone"]}<br/>
-                      <b>{translations['contract_text']['details_bank']}</b> {data["contractor_bank"]}<br/>
-                      <b>{translations['contract_text']['details_iban']}</b> {data["contractor_iban"]}<br/><br/>
-                      {translations['contract_text']['details_signature']}''', styles['CustomText']),
-         Paragraph(f'''<b>{data["client_name"]}</b><br/>
-                      <b>{translations['contract_text']['details_iin']}</b> {data["client_iin"]}<br/>
-                      <b>{translations['contract_text']['details_address']}</b> {data["client_address"]}<br/>
-                      <b>{translations['contract_text']['details_phone']}</b> {data["client_phone"]}<br/><br/><br/>
-                      {translations['contract_text']['details_signature']}''', styles['CustomText'])]
-    ]
+        # Порядок сдачи-приемки работ
+        story.append(Paragraph(translations['sections']['acceptance'], styles['CustomHeading']))
+        story.append(Paragraph(translations['contract_text']['acceptance_1'], styles['CustomText']))
+        story.append(Paragraph(translations['contract_text']['acceptance_2'], styles['CustomText']))
+        story.append(Paragraph(translations['contract_text']['acceptance_3'], styles['CustomText']))
+        
+        # Ответственность сторон
+        story.append(Paragraph(translations['sections']['responsibility'], styles['CustomHeading']))
+        story.append(Paragraph(translations['contract_text']['responsibility_1'], styles['CustomText']))
+        
+        # Форс-мажор
+        story.append(Paragraph(translations['sections']['force_majeure'], styles['CustomHeading']))
+        story.append(Paragraph(translations['contract_text']['force_majeure_1'], styles['CustomText']))
+        story.append(Paragraph(translations['contract_text']['force_majeure_2'], styles['CustomText']))
+        
+        # Конфиденциальность
+        story.append(Paragraph(translations['sections']['confidentiality'], styles['CustomHeading']))
+        story.append(Paragraph(translations['contract_text']['confidentiality_1'], styles['CustomText']))
+        story.append(Paragraph(translations['contract_text']['confidentiality_2'], styles['CustomText']))
+        
+        # Разрешение споров
+        story.append(Paragraph(translations['sections']['disputes'], styles['CustomHeading']))
+        story.append(Paragraph(translations['contract_text']['disputes_1'], styles['CustomText']))
+        story.append(Paragraph(translations['contract_text']['disputes_2'], styles['CustomText']))
+        
+        # Срок действия договора
+        story.append(Paragraph(translations['sections']['duration'], styles['CustomHeading']))
+        story.append(Paragraph(translations['contract_text']['duration_1'], styles['CustomText']))
+        story.append(Paragraph(translations['contract_text']['duration_2'], styles['CustomText']))
+        
+        story.append(Paragraph(translations['sections']['ip_rights'], styles['CustomHeading']))
+        story.append(Paragraph(get_intellectual_rights_text(data["intellectual_rights"], data["portfolio_rights"], lang), styles['CustomText']))
+        
+        # Реквизиты и подписи
+        story.append(Paragraph(translations['sections']['details'], styles['CustomHeading']))
+        story.append(Spacer(1, 20))  # Увеличиваем отступ перед таблицей
 
-    # Создаем таблицу с параметром keepTogether
-    table = Table(contractor_data, colWidths=[doc.width/2-6*mm, doc.width/2-6*mm])
-    table.setStyle(TableStyle([
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ('PADDING', (0, 0), (-1, -1), 12),
-        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
-    ]))
-    
-    # Оборачиваем таблицу в KeepTogether
-    from reportlab.platypus import KeepTogether
-    story.append(KeepTogether(table))
+        # Создаем таблицу для реквизитов
+        contractor_data = [
+            [Paragraph(translations['contract_text']['details_contractor'], styles['CustomText']), 
+             Paragraph(translations['contract_text']['details_client'], styles['CustomText'])],
+            [Paragraph(f'''<b>{data["contractor_name"]}</b><br/>
+                          <b>{translations['contract_text']['details_iin']}</b> {data["contractor_iin"]}<br/>
+                          <b>{translations['contract_text']['details_address']}</b> {data["contractor_address"]}<br/>
+                          <b>{translations['contract_text']['details_phone']}</b> {data["contractor_phone"]}<br/>
+                          <b>{translations['contract_text']['details_bank']}</b> {data["contractor_bank"]}<br/>
+                          <b>{translations['contract_text']['details_iban']}</b> {data["contractor_iban"]}<br/><br/>
+                          {translations['contract_text']['details_signature']}''', styles['CustomText']),
+             Paragraph(f'''<b>{data["client_name"]}</b><br/>
+                          <b>{translations['contract_text']['details_iin']}</b> {data["client_iin"]}<br/>
+                          <b>{translations['contract_text']['details_address']}</b> {data["client_address"]}<br/>
+                          <b>{translations['contract_text']['details_phone']}</b> {data["client_phone"]}<br/><br/><br/>
+                          {translations['contract_text']['details_signature']}''', styles['CustomText'])]
+        ]
 
-    # Создаем PDF с передачей языка через doc
-    doc.build(story, onFirstPage=add_page_number, onLaterPages=add_page_number)
-    
-    return output_path
+        # Создаем таблицу с параметром keepTogether
+        table = Table(contractor_data, colWidths=[doc.width/2-6*mm, doc.width/2-6*mm])
+        table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('PADDING', (0, 0), (-1, -1), 12),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+        ]))
+        
+        # Оборачиваем таблицу в KeepTogether
+        from reportlab.platypus import KeepTogether
+        story.append(KeepTogether(table))
+
+        # Создаем PDF
+        logger.info("Начало сборки PDF документа")
+        doc.build(story, onFirstPage=add_page_number, onLaterPages=add_page_number)
+        logger.info("PDF документ успешно создан")
+        
+        return output_path
+
+    except Exception as e:
+        logger.error(f"Ошибка при генерации договора: {str(e)}", exc_info=True)
+        raise
 
 def get_service_type_name(service_type, lang='ru'):
     """Возвращает название типа услуги на нужном языке"""
@@ -546,21 +467,6 @@ def get_intellectual_rights_text(rights_type, portfolio_rights, lang='ru'):
         }
     
     return texts.get(rights_type)
-
-def add_page_number(canvas, doc):
-    """
-    Добавляет номер страницы
-    """
-    canvas.saveState()
-    canvas.setFont('Arial', 9)
-    # Используем doc.lang для определения языка
-    page_text = "Бет" if doc.lang == 'kk' else "Страница"
-    canvas.drawRightString(
-        doc.pagesize[0] - doc.rightMargin,
-        doc.bottomMargin/2,
-        f"{page_text} {doc.page}"
-    )
-    canvas.restoreState()
 
 def number_to_words_ru(number, lang='ru'):
     """Преобразует число в текст на нужном языке"""

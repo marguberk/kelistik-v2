@@ -34,4 +34,14 @@ ENV/
 static/contracts/*.pdf
 
 # Локальные настройки
-.env 
+.env
+!.env.example
+
+# Шрифты
+!fonts/*.ttf
+
+# Кэш шрифтов
+.fonts/ 
+
+# Логи
+*.log 

@@ -1,41 +1,53 @@
-# Contract Generator
+# Kelistik - Генератор договоров
 
 Веб-приложение для генерации договоров на русском и казахском языках.
 
-## Установка
+## Развертывание на PythonAnywhere
 
-1. Клонируйте репозиторий:
+1. Создайте аккаунт на PythonAnywhere
+
+2. Откройте bash консоль и клонируйте репозиторий:
 ```bash
-git clone https://github.com/marguberk/contract-generator.git
-cd contract-generator
+git clone https://github.com/yourusername/kelistik.git
+cd kelistik
 ```
 
-2. Создайте виртуальное окружение и установите зависимости:
+3. Создайте и активируйте виртуальное окружение:
 ```bash
 python -m venv venv
-source venv/bin/activate  # для Linux/Mac
-# или
-venv\Scripts\activate  # для Windows
+source venv/bin/activate
+```
+
+4. Установите зависимости:
+```bash
 pip install -r requirements.txt
 ```
 
-3. Создайте файл .env из примера:
+5. Создайте файл .env:
 ```bash
 cp .env.example .env
+# Отредактируйте .env и установите свой SECRET_KEY
 ```
 
-4. Настройте пути в .env файле под вашу систему
+6. Настройте веб-приложение в PythonAnywhere:
+- Перейдите в раздел Web
+- Создайте новое веб-приложение
+- Выберите Flask и Python 3.10
+- Укажите путь к файлу WSGI:
+  ```python
+  import sys
+  path = '/home/yourusername/kelistik'
+  if path not in sys.path:
+      sys.path.append(path)
+  
+  from app import app as application
+  ```
 
-4. Запустите приложение:
-```bash
-python app.py
-```
+7. Настройте статические файлы:
+- URL: /static/
+- Directory: /home/yourusername/kelistik/static/
 
-## Использование
-
-1. Откройте браузер и перейдите по адресу `http://localhost:5000`
-2. Заполните форму договора
-3. Скачайте сгенерированный PDF файл
+8. Перезапустите веб-приложение
 
 ## Структура проекта
 
@@ -43,6 +55,11 @@ python app.py
 - `contract_generator.py` - генератор PDF документов
 - `forms.py` - формы Flask-WTF
 - `translations.py` - переводы интерфейса
-- `validators.py` - пользовательские валидаторы
+- `static/` - статические файлы
 - `templates/` - HTML шаблоны
-- `static/` - статические файлы 
+- `.env` - настройки окружения
+- `requirements.txt` - зависимости проекта
+
+## Шрифты
+
+Проект использует шрифты Roboto, которые автоматически загружаются при первом запуске. Шрифты кэшируются локально в директории `.fonts/`. 

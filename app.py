@@ -1,17 +1,22 @@
 from flask import Flask, render_template, request, send_file, send_from_directory, flash, redirect, url_for, g
-from forms import ContractForm
+from flask_wtf import FlaskForm
 from contract_generator import generate_contract, generate_bilingual_contract
+from forms import ContractForm
 import os
 from datetime import datetime
 import mimetypes
-from translations import translations
+from translations import CONTRACT_TRANSLATIONS as translations
+import logging
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.urandom(24)  # Возвращаем случайный ключ
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default-secret-key')
 app.config['UPLOAD_FOLDER'] = os.getenv('UPLOAD_FOLDER', 'static/contracts')
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 # Создаем папку для контрактов, если её нет
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+logger = logging.getLogger(__name__)
 
 @app.before_request
 def before_request():
@@ -27,7 +32,6 @@ def generate():
     form = ContractForm()
     if form.validate_on_submit():
         try:
-            print("Начинаем генерацию договора...")
             data = {
                 'contractor_name': form.contractor_name.data,
                 'contractor_iin': form.contractor_iin.data,
@@ -49,18 +53,19 @@ def generate():
                 'portfolio_rights': form.portfolio_rights.data,
                 'client_delay_days': form.client_delay_days.data,
             }
-            print(f"Данные формы собраны: {data}")
             
-            # Генерируем договор только на выбранном языке
-            pdf_path = generate_contract(data, g.lang)
-            
-            return render_template('download.html', 
-                                 pdf_path=pdf_path,  # Теперь передаем один путь
-                                 t=g.translations, 
-                                 lang=g.lang)
+            try:
+                pdf_path = generate_contract(data, g.lang)
+                return render_template('download.html', 
+                                     pdf_path=pdf_path,
+                                     t=g.translations, 
+                                     lang=g.lang)
+                
+            except Exception as e:
+                flash(g.translations['error_generating_contract'], 'error')
+                return render_template('form.html', form=form, t=g.translations, lang=g.lang)
             
         except Exception as e:
-            print(f"Ошибка при генерации договора: \n{str(e)}")
             flash(g.translations['error_generating_contract'], 'error')
             return render_template('form.html', form=form, t=g.translations, lang=g.lang)
     

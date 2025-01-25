@@ -12,8 +12,9 @@ from reportlab.lib import colors
 from num2words import num2words
 
 # Регистрируем системный шрифт с поддержкой кириллицы
-FONT_PATH = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'
-pdfmetrics.registerFont(TTFont('Arial', FONT_PATH))
+pdfmetrics.registerFont(TTFont('DejaVuSans', 'DejaVuSans'))
+pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', 'DejaVuSans-Bold'))
+pdfmetrics.registerFont(TTFont('DejaVuSans-Italic', 'DejaVuSans-Oblique'))
 
 # Добавим словарь с переводами текста договора
 CONTRACT_TRANSLATIONS = {
@@ -226,10 +227,6 @@ def generate_contract(data, lang='ru'):
     # Добавляем язык в объект doc для использования в add_page_number
     doc.lang = lang
     
-    # Регистрируем шрифты
-    pdfmetrics.registerFont(TTFont('Arial', FONT_PATH))
-    pdfmetrics.registerFont(TTFont('Arial-Bold', '/System/Library/Fonts/Supplemental/Arial Bold.ttf'))
-    
     # Создаем стили с указанием шрифта и поддержкой HTML
     styles = getSampleStyleSheet()
     
@@ -237,7 +234,7 @@ def generate_contract(data, lang='ru'):
     styles.add(ParagraphStyle(
         name='CustomTitle',
         parent=styles['Heading1'],
-        fontName='Arial-Bold',  # Используем жирный шрифт для заголовка
+        fontName='DejaVuSans-Bold',  # Используем жирный шрифт для заголовка
         alignment=TA_CENTER,
         fontSize=16,
         spaceAfter=30,
@@ -249,7 +246,7 @@ def generate_contract(data, lang='ru'):
     styles.add(ParagraphStyle(
         name='CustomText',
         parent=styles['Normal'],
-        fontName='Arial',
+        fontName='DejaVuSans',
         alignment=TA_JUSTIFY,
         fontSize=12,
         spaceAfter=12,
@@ -265,7 +262,7 @@ def generate_contract(data, lang='ru'):
     styles.add(ParagraphStyle(
         name='TermStyle',
         parent=styles['CustomText'],
-        fontName='Arial-Bold',  # Используем жирный шрифт
+        fontName='DejaVuSans-Bold',  # Используем жирный шрифт
         firstLineIndent=0,  # Убираем отступ первой строки для терминов
         spaceBefore=12,  # Увеличиваем отступ перед термином
     ))
@@ -274,16 +271,16 @@ def generate_contract(data, lang='ru'):
     styles.add(ParagraphStyle(
         name='CustomBold',
         parent=styles['CustomText'],
-        fontName='Arial-Bold',  # Нужно зарегистрировать жирный шрифт
+        fontName='DejaVuSans-Bold',  # Нужно зарегистрировать жирный шрифт
     ))
 
     # Регистрируем жирный и курсивный шрифты
-    pdfmetrics.registerFont(TTFont('Arial-Italic', '/System/Library/Fonts/Supplemental/Arial Italic.ttf'))
+    pdfmetrics.registerFont(TTFont('DejaVuSans-Italic', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf'))
     
     styles.add(ParagraphStyle(
         name='CustomHeading',
         parent=styles['Heading2'],
-        fontName='Arial',
+        fontName='DejaVuSans',
         fontSize=14,
         spaceAfter=12,
         spaceBefore=20,
@@ -296,7 +293,7 @@ def generate_contract(data, lang='ru'):
     styles.add(ParagraphStyle(
         name='DateStyle',
         parent=styles['Normal'],
-        fontName='Arial',
+        fontName='DejaVuSans',
         fontSize=12,
         spaceAfter=20,
         alignment=TA_CENTER
@@ -551,7 +548,7 @@ def add_page_number(canvas, doc):
     Добавляет номер страницы
     """
     canvas.saveState()
-    canvas.setFont('Arial', 9)
+    canvas.setFont('DejaVuSans', 9)
     # Используем doc.lang для определения языка
     page_text = "Бет" if doc.lang == 'kk' else "Страница"
     canvas.drawRightString(

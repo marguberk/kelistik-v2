@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto p-8">
+    <h2 class="text-2xl font-bold mb-6">Создание договора</h2>
+    
+    <form method="POST" class="space-y-8">
+        <!-- Существующие поля формы -->
+        
+        <!-- Новая секция для дополнительных условий -->
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h3 class="text-lg font-semibold mb-4">Дополнительные условия</h3>
+            
+            <!-- Портфолио -->
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2">
+                    Разрешить использование работы в портфолио?
+                </label>
+                <select name="portfolio_rights" class="form-select w-full">
+                    <option value="yes">Да, разрешить</option>
+                    <option value="no">Нет, запретить</option>
+                </select>
+            </div>
+
+            <!-- Сроки для задержек -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">
+                        Допустимая задержка со стороны заказчика (рабочих дней)
+                    </label>
+                    <input type="number" 
+                           name="client_delay_days" 
+                           class="form-input w-full" 
+                           value="3" 
+                           min="1" 
+                           max="30">
+                </div>
+
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">
+                        Срок уведомления о задержке исполнителем (рабочих дней)
+                    </label>
+                    <input type="number" 
+                           name="contractor_delay_notice_days" 
+                           class="form-input w-full" 
+                           value="2" 
+                           min="1" 
+                           max="10">
+                </div>
+
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">
+                        Максимальная задержка до расторжения (календарных дней)
+                    </label>
+                    <input type="number" 
+                           name="max_delay_days" 
+                           class="form-input w-full" 
+                           value="14" 
+                           min="1" 
+                           max="60">
+                </div>
+            </div>
+
+            <!-- Подсказка -->
+            <div class="mt-4 text-sm text-gray-600">
+                <p class="mb-2"><strong>Примечание:</strong></p>
+                <ul class="list-disc pl-5 space-y-1">
+                    <li>Допустимая задержка - период, после которого исполнитель может перенести сроки</li>
+                    <li>Срок уведомления - за сколько дней исполнитель должен предупредить о возможной задержке</li>
+                    <li>Максимальная задержка - период, после которого можно расторгнуть договор</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Кнопка отправки -->
+        <div class="flex justify-end">
+            <button type="submit" 
+                    class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Создать договор
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %} 

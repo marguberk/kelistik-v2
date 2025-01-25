@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <div class="header">
+        <div class="title">ДОГОВОР ОКАЗАНИЯ УСЛУГ № {{ number }}</div>
+        <div>г. Алматы {{ date }}</div>
+    </div>
+
+    <div class="content">
+        <p>
+            {{ client.name }}, именуемый в дальнейшем "Заказчик", БИН/ИИН {{ client.iin }}, 
+            адрес: {{ client.address }}, телефон: {{ client.phone }}, с одной стороны, 
+            и {{ contractor.name }}, именуемый в дальнейшем "Исполнитель", 
+            ИИН {{ contractor.iin }}, адрес: {{ contractor.address }}, 
+            телефон: {{ contractor.phone }}, с другой стороны, 
+            заключили настоящий договор о нижеследующем:
+        </p>
+
+        <div class="section">
+            <div class="section-title">1. ПРЕДМЕТ ДОГОВОРА</div>
+            <p>1.1. Исполнитель обязуется оказать услуги {{ service.type }}: {{ service.description }}</p>
+            <p>1.2. Срок выполнения работ: до {{ service.deadline }}</p>
+            <p>1.3. Количество возможных правок: {{ service.revisions }}</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">2. СТОИМОСТЬ УСЛУГ И ПОРЯДОК РАСЧЕТОВ</div>
+            <p>2.1. Стоимость услуг составляет {{ service.price }} тенге.</p>
+            <p>2.2. Оплата производится в следующем порядке:</p>
+            <ul>
+                <li>{{ service.prepayment }}% предоплата ({{ service.prepayment_amount }} тенге)</li>
+                <li>Оставшаяся сумма после подписания акта выполненных работ</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <div class="section-title">3. ПРАВА НА РЕЗУЛЬТАТЫ РАБОТ</div>
+            <p>{{ rights }}</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">4. РЕКВИЗИТЫ И ПОДПИСИ СТОРОН</div>
+            <table>
+                <tr>
+                    <td>
+                        <strong>ИСПОЛНИТЕЛЬ:</strong><br>
+                        {{ contractor.name }}<br>
+                        ИИН: {{ contractor.iin }}<br>
+                        Адрес: {{ contractor.address }}<br>
+                        Телефон: {{ contractor.phone }}<br>
+                        Банк: {{ contractor.bank }}<br>
+                        IBAN: {{ contractor.iban }}<br><br>
+                        ________________ (подпись)
+                    </td>
+                    <td>
+                        <strong>ЗАКАЗЧИК:</strong><br>
+                        {{ client.name }}<br>
+                        БИН/ИИН: {{ client.iin }}<br>
+                        Адрес: {{ client.address }}<br>
+                        Телефон: {{ client.phone }}<br><br><br>
+                        ________________ (подпись)
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</body>
+</html> 

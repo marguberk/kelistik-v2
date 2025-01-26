@@ -30,35 +30,38 @@ logger = logging.getLogger(__name__)
 
 # URL для скачивания шрифтов Roboto
 FONT_URLS = {
-    'regular': 'https://github.com/googlefonts/roboto-2/raw/main/src/hinted/Roboto-Regular.ttf',
-    'bold': 'https://github.com/googlefonts/roboto-2/raw/main/src/hinted/Roboto-Bold.ttf',
-    'italic': 'https://github.com/googlefonts/roboto-2/raw/main/src/hinted/Roboto-Italic.ttf',
-    'bolditalic': 'https://github.com/googlefonts/roboto-2/raw/main/src/hinted/Roboto-BoldItalic.ttf'
+    'regular': 'https://raw.githubusercontent.com/googlefonts/roboto-2/main/src/hinted/Roboto-Regular.ttf',
+    'bold': 'https://raw.githubusercontent.com/googlefonts/roboto-2/main/src/hinted/Roboto-Bold.ttf',
+    'italic': 'https://raw.githubusercontent.com/googlefonts/roboto-2/main/src/hinted/Roboto-Italic.ttf',
+    'bolditalic': 'https://raw.githubusercontent.com/googlefonts/roboto-2/main/src/hinted/Roboto-BoldItalic.ttf'
 }
+
+# Регистрация шрифтов
+pdfmetrics.registerFont(TTFont('Roboto', BytesIO(requests.get(FONT_URLS['regular']).content)))
+pdfmetrics.registerFont(TTFont('Roboto-Bold', BytesIO(requests.get(FONT_URLS['bold']).content)))
+pdfmetrics.registerFont(TTFont('Roboto-Italic', BytesIO(requests.get(FONT_URLS['italic']).content)))
+pdfmetrics.registerFont(TTFont('Roboto-BoldItalic', BytesIO(requests.get(FONT_URLS['bolditalic']).content)))
 
 def download_and_register_fonts():
     """Скачивает и регистрирует шрифты Roboto"""
-    font_dir = os.path.join(os.path.dirname(__file__), '.fonts')
-    os.makedirs(font_dir, exist_ok=True)
+    logger.info("Начало загрузки и регистрации шрифтов")
     
     for style, url in FONT_URLS.items():
-        font_path = os.path.join(font_dir, f'Roboto-{style}.ttf')
-        
-        # Скачиваем шрифт, если его нет
-        if not os.path.exists(font_path):
-            try:
-                response = requests.get(url, timeout=10)
-                response.raise_for_status()
-                with open(font_path, 'wb') as f:
-                    f.write(response.content)
-            except Exception:
-                continue
-        
-        # Регистрируем шрифт
-        font_name = f'Roboto-{style}'
+        logger.info(f"Обработка шрифта {style}")
         try:
-            pdfmetrics.registerFont(TTFont(font_name, font_path))
-        except Exception:
+            logger.info(f"Загрузка шрифта {style} с URL: {url}")
+            response = requests.get(url)
+            response.raise_for_status()
+            font_data = BytesIO(response.content)
+            logger.info(f"Шрифт {style} успешно загружен")
+            
+            # Регистрируем шрифт
+            font_name = f'Roboto-{style}'
+            pdfmetrics.registerFont(TTFont(font_name, font_data))
+            logger.info(f"Шрифт {font_name} успешно зарегистрирован")
+            
+        except Exception as e:
+            logger.error(f"Ошибка при обработке шрифта {style}: {str(e)}")
             continue
 
 # Скачиваем и регистрируем шрифты при запуске

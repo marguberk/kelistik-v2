@@ -1,10 +1,8 @@
 {% extends "base.html" %}
-
 {% block content %}
-<div class="container text-center mt-5">
+<div class="error-page">
     <h1>404</h1>
-    <h2>{{ t.get('page_not_found') }}</h2>
-    <p>{{ t.get('page_not_found_description') }}</p>
-    <a href="{{ url_for('index') }}" class="btn btn-primary">{{ t.get('back_to_home') }}</a>
+    <p>{{ t.gettext('Page not found') }}</p>
+    <a href="{{ url_for('index') }}">{{ t.gettext('Return to home page') }}</a>
 </div>
 {% endblock %} 

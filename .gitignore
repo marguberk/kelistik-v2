@@ -44,4 +44,4 @@ static/contracts/*.pdf
 .fonts/ 
 
 # Логи
-*.log 
+*.log .DS_Store

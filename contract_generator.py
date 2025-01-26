@@ -8,7 +8,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.lib.units import cm, mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
+from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_RIGHT
 from reportlab.lib import colors
 from num2words import num2words
 # Добавляем импорт переводов
@@ -19,11 +19,11 @@ import sys
 
 # Настраиваем логирование
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
+    level=logging.ERROR,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler('contract_generator.log'),
-        logging.StreamHandler(sys.stdout)
+        logging.StreamHandler()
     ]
 )
 logger = logging.getLogger(__name__)
@@ -38,34 +38,28 @@ FONT_URLS = {
 
 def download_and_register_fonts():
     """Скачивает и регистрирует шрифты Roboto"""
-    logger.info("Начало загрузки и регистрации шрифтов")
     font_dir = os.path.join(os.path.dirname(__file__), '.fonts')
     os.makedirs(font_dir, exist_ok=True)
     
     for style, url in FONT_URLS.items():
         font_path = os.path.join(font_dir, f'Roboto-{style}.ttf')
-        logger.info(f"Обработка шрифта {style}")
         
         # Скачиваем шрифт, если его нет
         if not os.path.exists(font_path):
             try:
-                logger.info(f"Загрузка шрифта {style} с URL: {url}")
                 response = requests.get(url, timeout=10)
                 response.raise_for_status()
                 with open(font_path, 'wb') as f:
                     f.write(response.content)
-                logger.info(f"Шрифт {style} успешно загружен")
-            except Exception as e:
-                logger.error(f"Ошибка при загрузке шрифта {style}: {e}")
+            except Exception:
                 continue
         
         # Регистрируем шрифт
         font_name = f'Roboto-{style}'
         try:
             pdfmetrics.registerFont(TTFont(font_name, font_path))
-            logger.info(f"Шрифт {font_name} успешно зарегистрирован")
-        except Exception as e:
-            logger.error(f"Ошибка при регистрации шрифта {style}: {e}")
+        except Exception:
+            continue
 
 # Скачиваем и регистрируем шрифты при запуске
 download_and_register_fonts()
@@ -136,7 +130,8 @@ def create_styles():
 def add_page_number(canvas, doc):
     canvas.saveState()
     canvas.setFont('Roboto-regular', 9)
-    page_text = "Бет" if doc.lang == 'kk' else "Страница"
+    # Используем правильный текст в зависимости от языка
+    page_text = "Бет" if hasattr(doc, 'lang') and doc.lang == 'kk' else "Страница"
     canvas.drawRightString(
         doc.pagesize[0] - doc.rightMargin,
         doc.bottomMargin/2,
@@ -144,104 +139,61 @@ def add_page_number(canvas, doc):
     )
     canvas.restoreState()
 
-def generate_contract(data, lang='ru'):
-    """
-    Генерирует договор в формате PDF на указанном языке
-    """
-    logger.info(f"Начало генерации договора на языке: {lang}")
-    logger.info(f"Полученные данные: {data}")
-    
+def generate_contract(data, lang):
     try:
+        # Получаем переводы для выбранного языка
         translations = CONTRACT_TRANSLATIONS[lang]
-        logger.info("Переводы успешно загружены")
         
-        # Проверяем наличие всех необходимых ключей в переводах
-        required_keys = ['title', 'city', 'client_intro', 'contractor_intro', 'from_one_side', 
-                        'from_other_side', 'agreement_intro', 'terms', 'sections', 'contract_text']
-        missing_keys = [key for key in required_keys if key not in translations]
-        if missing_keys:
-            logger.error(f"Отсутствуют следующие ключи в переводах: {missing_keys}")
-            raise KeyError(f"Missing required translation keys: {missing_keys}")
+        # Форматируем данные
+        service_type = get_service_type_name(data["service_type"], lang)
+        current_date = datetime.now().strftime("%d.%m.%Y")
+        contract_number = datetime.now().strftime("%Y%m%d%H%M%S")
+        revisions_count = data.get('revisions_count', '3')
+        price_text = number_to_words_ru(float(data["price"]), lang)
         
-        # Проверяем наличие всех необходимых ключей в contract_text
-        required_contract_keys = ['subject_1', 'subject_2', 'subject_3', 'payment_1', 'payment_2', 
-                                'payment_3', 'rights_contractor', 'rights_client']
-        missing_contract_keys = [key for key in required_contract_keys 
-                               if key not in translations.get('contract_text', {})]
-        if missing_contract_keys:
-            logger.error(f"Отсутствуют следующие ключи в contract_text: {missing_contract_keys}")
-            raise KeyError(f"Missing required contract_text keys: {missing_contract_keys}")
+        # Создаем PDF
+        filename = f'contract_{contract_number}.pdf'
+        filepath = os.path.join('static/contracts', filename)
         
-        # Проверяем функции форматирования
-        try:
-            service_type = get_service_type_name(data["service_type"], lang)
-            logger.info(f"Тип услуги определен: {service_type}")
-            
-            revisions = get_revisions_text(data["revisions_count"], lang)
-            logger.info(f"Текст о правках определен: {revisions}")
-            
-            price_text = number_to_words_ru(data["price"], lang)
-            logger.info(f"Сумма прописью: {price_text}")
-        except Exception as e:
-            logger.error(f"Ошибка при форматировании данных: {str(e)}", exc_info=True)
-            raise
-        
-        # Создаем директорию если её нет
-        output_dir = os.path.join(os.path.dirname(__file__), 'static', 'contracts')
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-            logger.info(f"Создана директория: {output_dir}")
-        
-        # Используем абсолютный путь для файла
-        filename = f'Договор_{datetime.now().strftime("%Y%m%d%H%M")}_{lang}.pdf'
-        output_path = os.path.join(output_dir, filename)
-        logger.info(f"Путь для сохранения файла: {output_path}")
-
-        # Создаем PDF документ
         doc = SimpleDocTemplate(
-            output_path,
+            filepath,
             pagesize=A4,
             rightMargin=2*cm,
-            leftMargin=3*cm,
+            leftMargin=2*cm,
             topMargin=2*cm,
             bottomMargin=2*cm
         )
-        
-        # Добавляем язык в объект doc для использования в add_page_number
+        # Добавляем язык в объект doc
         doc.lang = lang
         
         # Создаем стили
         styles = create_styles()
-        logger.info("Стили созданы успешно")
-        
-        # Формируем содержимое
         story = []
         
-        logger.info("Начало формирования содержимого")
-        
         # Заголовок
-        logger.info("Добавление заголовка")
+        if lang == 'ru':
+            title = f'ДОГОВОР ОКАЗАНИЯ УСЛУГ № {contract_number}'
+        else:
+            title = f'ҚЫЗМЕТ КӨРСЕТУ ШАРТЫ № {contract_number}'
+            
         story.append(Paragraph(
-            f'{translations["title"]} № {datetime.now().strftime("%Y%m%d%H%M")}',
+            title,
             styles['CustomTitle']
         ))
         
-        logger.info("Создание преамбулы")
-        # Создаем таблицу для даты и города
-        date_data = [[
-            Paragraph(translations['city'], styles['CustomText']),
-            Paragraph(datetime.now().strftime("%d.%m.%Y"), styles['CustomText'])
-        ]]
-        
-        date_table = Table(date_data, colWidths=[doc.width/2, doc.width/2])
-        date_table.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (0, 0), 'LEFT'),
-            ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ]))
-        
-        story.append(date_table)
-        story.append(Spacer(1, 12))
+        # Дата по правому краю
+        story.append(Paragraph(
+            current_date,
+            ParagraphStyle(
+                'Date',
+                parent=styles['Normal'],
+                fontName='Roboto-regular',
+                fontSize=12,
+                alignment=TA_RIGHT,
+                spaceBefore=12,
+                spaceAfter=24
+            )
+        ))
         
         # Преамбула
         preamble = (
@@ -284,7 +236,8 @@ def generate_contract(data, lang='ru'):
         story.append(Paragraph(
             translations['contract_text']['subject_1'].format(
                 service_type=service_type,
-                description=data["service_description"]
+                description=data["service_description"],
+                revisions=revisions_count
             ),
             styles['CustomText']
         ))
@@ -296,7 +249,7 @@ def generate_contract(data, lang='ru'):
         ))
         story.append(Paragraph(
             translations['contract_text']['subject_3'].format(
-                revisions=revisions
+                revisions=revisions_count
             ),
             styles['CustomText']
         ))
@@ -418,10 +371,10 @@ def generate_contract(data, lang='ru'):
         doc.build(story, onFirstPage=add_page_number, onLaterPages=add_page_number)
         logger.info("PDF документ успешно создан")
         
-        return output_path
+        return filepath
 
     except Exception as e:
-        logger.error(f"Ошибка при генерации договора: {str(e)}", exc_info=True)
+        logger.error(f"Contract generation error: {str(e)}", exc_info=True)
         raise
 
 def get_service_type_name(service_type, lang='ru'):

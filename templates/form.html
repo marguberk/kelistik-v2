@@ -1,132 +1,156 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto p-8">
-    <h2 class="text-2xl font-bold mb-6">{{ t.form_title }}</h2>
+<div class="max-w-4xl mx-auto p-4">
+    <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">{{ t.form_title }}</h2>
     
-    <form method="POST" class="space-y-8">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {# Показываем только последнее сообщение #}
+            {% set last_message = messages[-1] %}
+            <div class="mb-4 p-4 rounded-lg {% if last_message[0] == 'error' %}bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200{% else %}bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200{% endif %} transition-colors duration-200">
+                {{ last_message[1] }}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('generate', lang=lang) }}" class="space-y-6">
         {{ form.csrf_token }}
         
         <!-- Данные исполнителя -->
-        <div class="bg-white p-6 rounded-lg shadow-md">
-            <h3 class="text-lg font-semibold mb-4">{{ t.contractor_details }}</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    {{ form.contractor_name.label(class="block text-gray-700 text-sm font-bold mb-2", text=t.contractor_name) }}
-                    {{ form.contractor_name(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500") }}
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm transition duration-200">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">{{ t.contractor_details }}</h3>
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="space-y-1">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t.contractor_name }}</label>
+                    {{ form.contractor_name(class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400") }}
                 </div>
-                <div>
-                    {{ form.contractor_iin.label(class="block text-gray-700 text-sm font-bold mb-2", text=t.contractor_iin) }}
-                    {{ form.contractor_iin(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500") }}
+
+                <div class="space-y-1">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t.contractor_iin }}</label>
+                    {{ form.contractor_iin(class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400") }}
                 </div>
-                <div>
-                    {{ form.contractor_phone.label(class="block text-gray-700 text-sm font-bold mb-2", text=t.contractor_phone) }}
-                    {{ form.contractor_phone(class="phone-input w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500", autocomplete="off", value="+7") }}
-                    {% if form.contractor_phone.errors %}
-                        {% for error in form.contractor_phone.errors %}
-                            <p class="text-red-500 text-sm mt-1">{{ error }}</p>
-                        {% endfor %}
-                    {% endif %}
+
+                <div class="space-y-1">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t.contractor_phone }}</label>
+                    {{ form.contractor_phone(class="phone-input w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400") }}
                 </div>
-                <div>
-                    {{ form.contractor_address.label(class="block text-gray-700 text-sm font-bold mb-2", text=t.contractor_address) }}
-                    {{ form.contractor_address(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500") }}
+
+                <div class="space-y-1">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t.contractor_address }}</label>
+                    {{ form.contractor_address(class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400") }}
                 </div>
-                <div>
-                    {{ form.contractor_bank.label(class="block text-gray-700 text-sm font-bold mb-2", text=t.contractor_bank) }}
-                    {{ form.contractor_bank(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500") }}
+
+                <div class="space-y-1">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t.contractor_bank }}</label>
+                    {{ form.contractor_bank(class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400") }}
                 </div>
-                <div>
-                    {{ form.contractor_iban.label(class="block text-gray-700 text-sm font-bold mb-2", text=t.contractor_iban) }}
-                    {{ form.contractor_iban(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500") }}
+
+                <div class="space-y-1">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t.contractor_iban }}</label>
+                    {{ form.contractor_iban(class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400") }}
                 </div>
             </div>
         </div>
 
         <!-- Данные заказчика -->
-        <div class="bg-white p-6 rounded-lg shadow-md">
-            <h3 class="text-lg font-semibold mb-4">{{ t.client_details }}</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    {{ form.client_name.label(class="block text-gray-700 text-sm font-bold mb-2", text=t.client_name) }}
-                    {{ form.client_name(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500") }}
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm transition duration-200">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">{{ t.client_details }}</h3>
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="space-y-1">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t.client_name }}</label>
+                    {{ form.client_name(class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400") }}
                 </div>
-                <div>
-                    {{ form.client_iin.label(class="block text-gray-700 text-sm font-bold mb-2", text=t.client_iin) }}
-                    {{ form.client_iin(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500") }}
+
+                <div class="space-y-1">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t.client_iin }}</label>
+                    {{ form.client_iin(class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400") }}
                 </div>
-                <div>
-                    {{ form.client_phone.label(class="block text-gray-700 text-sm font-bold mb-2", text=t.client_phone) }}
-                    {{ form.client_phone(class="phone-input w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500", autocomplete="off", value="+7") }}
-                    {% if form.client_phone.errors %}
-                        {% for error in form.client_phone.errors %}
-                            <p class="text-red-500 text-sm mt-1">{{ error }}</p>
-                        {% endfor %}
-                    {% endif %}
+
+                <div class="space-y-1">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t.client_phone }}</label>
+                    {{ form.client_phone(class="phone-input w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400") }}
                 </div>
-                <div>
-                    {{ form.client_address.label(class="block text-gray-700 text-sm font-bold mb-2", text=t.client_address) }}
-                    {{ form.client_address(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500") }}
+
+                <div class="space-y-1">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t.client_address }}</label>
+                    {{ form.client_address(class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400") }}
                 </div>
             </div>
         </div>
 
-        <!-- Детали услуги -->
-        <div class="bg-white p-6 rounded-lg shadow-md">
-            <h3 class="text-lg font-semibold mb-4">{{ t.service_details }}</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    {{ form.service_type.label(class="block text-gray-700 text-sm font-bold mb-2", text=t.service_type) }}
-                    {{ form.service_type(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500") }}
+        <!-- Условия договора -->
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm transition duration-200">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">{{ t.service_details }}</h3>
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="space-y-1">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t.service_type }}</label>
+                    {{ form.service_type(class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400") }}
                 </div>
-                <div>
-                    {{ form.service_description.label(class="block text-gray-700 text-sm font-bold mb-2", text=t.service_description) }}
-                    {{ form.service_description(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500") }}
+
+                <div class="space-y-1">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t.price }}</label>
+                    {{ form.price(class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400") }}
                 </div>
-                <div>
-                    {{ form.price.label(class="block text-gray-700 text-sm font-bold mb-2", text=t.price) }}
-                    {{ form.price(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500") }}
+
+                <div class="space-y-1">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t.prepayment }}</label>
+                    {{ form.prepayment_percent(class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400") }}
                 </div>
-                <div>
-                    {{ form.prepayment_percent.label(class="block text-gray-700 text-sm font-bold mb-2", text=t.prepayment) }}
-                    {{ form.prepayment_percent(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500") }}
+
+                <div class="space-y-1">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t.deadline }}</label>
+                    {{ form.deadline(class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400") }}
                 </div>
-                <div>
-                    {{ form.deadline.label(class="block text-gray-700 text-sm font-bold mb-2", text=t.deadline) }}
-                    {{ form.deadline(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500") }}
-                </div>
+            </div>
+
+            <!-- Описание услуги -->
+            <div class="mt-4 space-y-1">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t.service_description }}</label>
+                {{ form.service_description(class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400", rows="6") }}
+                {% if form.service_description.errors %}
+                    {% for error in form.service_description.errors %}
+                        <p class="text-red-500 dark:text-red-400 text-sm">{{ error }}</p>
+                    {% endfor %}
+                {% endif %}
             </div>
         </div>
 
         <!-- Дополнительные условия -->
-        <div class="bg-white p-6 rounded-lg shadow-md">
-            <h3 class="text-lg font-semibold mb-4">{{ t.additional_terms }}</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    {{ form.revisions_count.label(class="block text-gray-700 text-sm font-bold mb-2", text=t.revisions_count) }}
-                    {{ form.revisions_count(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500") }}
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm transition duration-200">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">{{ t.additional_terms }}</h3>
+            <div class="grid md:grid-cols-2 gap-4">
+                <!-- Количество правок -->
+                <div class="space-y-1">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t.revisions_count }}</label>
+                    {{ form.revisions_count(class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400") }}
                 </div>
-                <div>
-                    {{ form.intellectual_rights.label(class="block text-gray-700 text-sm font-bold mb-2", text=t.intellectual_rights) }}
-                    {{ form.intellectual_rights(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500") }}
+
+                <!-- Права на результаты -->
+                <div class="space-y-1">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t.intellectual_rights }}</label>
+                    {{ form.intellectual_rights(class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400") }}
                 </div>
-                <div>
-                    {{ form.portfolio_rights.label(class="block text-gray-700 text-sm font-bold mb-2", text=t.portfolio_rights) }}
-                    {{ form.portfolio_rights(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500") }}
+
+                <!-- Использование в портфолио -->
+                <div class="space-y-1">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t.portfolio_rights }}</label>
+                    {{ form.portfolio_rights(class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400") }}
                 </div>
-                <div>
-                    {{ form.client_delay_days.label(class="block text-gray-700 text-sm font-bold mb-2", text=t.client_delay) }}
-                    {{ form.client_delay_days(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500") }}
+
+                <!-- Допустимая задержка -->
+                <div class="space-y-1">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t.client_delay }}</label>
+                    {{ form.client_delay_days(class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400") }}
                 </div>
             </div>
         </div>
 
         <!-- Кнопка отправки -->
-        <div class="flex justify-end">
-            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                {{ t.generate_contract }}
-            </button>
-        </div>
+        <button type="submit" 
+                class="w-full py-3 bg-blue-600 dark:bg-blue-500 text-white font-medium rounded-lg transform transition duration-200 hover:scale-105 hover:shadow-lg">
+            {{ t.generate_contract }}
+        </button>
     </form>
 </div>
 {% endblock %} 

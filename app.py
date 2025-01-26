@@ -3,7 +3,7 @@ from flask_wtf import FlaskForm
 from contract_generator import generate_contract, generate_bilingual_contract
 from forms import ContractForm
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import mimetypes
 from translations import CONTRACT_TRANSLATIONS as translations
 import logging
@@ -36,6 +36,8 @@ CORS(app)  # Добавляем поддержку CORS
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default-secret-key')
 app.config['UPLOAD_FOLDER'] = os.getenv('UPLOAD_FOLDER', 'static/contracts')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
+app.config['WTF_CSRF_TIME_LIMIT'] = 1800  # 30 минут
 
 # Создаем папку для контрактов, если её нет
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)

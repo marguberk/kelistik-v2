@@ -1,9 +1,10 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="min-h-screen flex items-center justify-center">
-    <div class="bg-white p-4 sm:p-4 rounded-lg shadow-md text-center">
-        <!-- ... -->
-    </div>
+<div class="container text-center mt-5">
+    <h1>404</h1>
+    <h2>{{ t.get('page_not_found') }}</h2>
+    <p>{{ t.get('page_not_found_description') }}</p>
+    <a href="{{ url_for('index') }}" class="btn btn-primary">{{ t.get('back_to_home') }}</a>
 </div>
 {% endblock %} 

@@ -38,10 +38,12 @@ static/contracts/*.pdf
 !.env.example
 
 # Шрифты
-!fonts/*.ttf
+fonts/*
+!fonts/Roboto*.ttf
 
 # Кэш шрифтов
 .fonts/ 
 
 # Логи
-*.log .DS_Store
+*.log
+.DS_Store

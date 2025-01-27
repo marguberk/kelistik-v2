@@ -1,6 +1,7 @@
 Flask==2.0.1
 Flask-WTF==0.15.1
-reportlab==3.6.2
+Werkzeug==2.0.1
+reportlab==3.6.12
 requests==2.26.0
 num2words==0.5.10
 Flask-Babel==2.0.0

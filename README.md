@@ -1,6 +1,38 @@
-# Kelistik - Генератор договоров
+# Kelistik V2
 
-Веб-приложение для генерации договоров на русском и казахском языках.
+Contract generator web application that creates bilingual (Russian/Kazakh) contracts.
+
+## Setup
+
+1. Create virtual environment:
+```python
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# or
+venv\Scripts\activate  # Windows
+```
+
+2. Install dependencies:
+```python
+pip install -r requirements.txt
+```
+
+3. Copy .env.example to .env and configure:
+```bash
+cp .env.example .env
+```
+
+4. Run the application:
+```python
+flask run
+```
+
+## Features
+
+- Bilingual contract generation (Russian/Kazakh)
+- PDF output
+- Customizable templates
+- Web interface for data input
 
 ## Развертывание на PythonAnywhere
 

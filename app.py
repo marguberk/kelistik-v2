@@ -8,6 +8,10 @@ import mimetypes
 from translations import CONTRACT_TRANSLATIONS as translations
 import logging
 from flask_cors import CORS
+from functools import lru_cache
+from werkzeug.middleware.shared_data import SharedDataMiddleware
+import threading
+from queue import Queue
 
 # Настраиваем логирование
 logging.basicConfig(
@@ -45,14 +49,48 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 # Отключаем логи о загрузке шрифтов
 logging.getLogger('weasyprint').setLevel(logging.ERROR)
 
+# Добавляем поддержку статических файлов
+app.wsgi_app = SharedDataMiddleware(app.wsgi_app, {
+    '/static': os.path.join(os.path.dirname(__file__), 'static')
+})
+
+# Очередь для асинхронной генерации PDF
+pdf_queue = Queue()
+
 @app.before_request
 def before_request():
     g.lang = request.args.get('lang', 'ru')
-    g.translations = translations[g.lang]
+    # Создаем объект с методом gettext и get
+    class Translations:
+        def __init__(self, translations_dict):
+            self.translations = translations_dict
+        
+        def gettext(self, text):
+            return self.translations.get(text, text)
+        
+        def get(self, text):  # Добавляем метод get
+            return self.translations.get(text, text)
+        
+        def __getitem__(self, key):
+            return self.translations.get(key, key)
+    
+    g.translations = Translations(translations[g.lang])
 
 @app.route('/')
 def index():
     return render_template('index.html', t=g.translations, lang=g.lang)
+
+# Кэшируем создание PDF
+@lru_cache(maxsize=32)
+def generate_cached_contract(data_tuple, lang):
+    return generate_contract(dict(data_tuple), lang)
+
+def process_pdf_generation(data, lang, result_queue):
+    try:
+        pdf_path = generate_contract(data, lang)
+        result_queue.put(('success', pdf_path))
+    except Exception as e:
+        result_queue.put(('error', str(e)))
 
 @app.route('/generate', methods=['GET', 'POST'])
 def generate():
@@ -85,14 +123,35 @@ def generate():
                 'client_delay_days': form.client_delay_days.data
             }
 
-            pdf_path = generate_contract(data, g.lang)
+            # Создаем очередь для результата
+            result_queue = Queue()
+            
+            # Запускаем генерацию PDF в отдельном потоке
+            thread = threading.Thread(
+                target=process_pdf_generation,
+                args=(data, g.lang, result_queue)
+            )
+            thread.start()
+            
+            # Ждем результат не более 10 секунд
+            thread.join(timeout=10)
+            
+            if thread.is_alive():
+                # Если генерация занимает слишком много времени
+                flash(g.translations.gettext('generation_taking_long'), 'info')
+                return render_template('generating.html', t=g.translations, lang=g.lang)
+            
+            status, result = result_queue.get()
+            if status == 'error':
+                raise Exception(result)
+                
             return render_template('download.html', 
-                                pdf_path=pdf_path,
+                                pdf_path=result,
                                 t=g.translations, 
                                 lang=g.lang)
             
         except Exception as e:
-            flash(g.translations['error_generating_contract'], 'error')
+            flash(g.translations.gettext('error_generating_contract'), 'error')
             return render_template('form.html', form=form, t=g.translations, lang=g.lang)
     
     if form.errors:
@@ -109,7 +168,7 @@ def download_file(path):
         
         # Название файла зависит от языка в URL
         filename = 'Келісімшарт.pdf' if current_lang == 'kk' else 'Договор.pdf'
-        file_path = os.path.join('static/contracts', path.split('/')[-1])
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], path.split('/')[-1])
         
         # Если запрос для скачивания
         if request.args.get('download'):
@@ -121,35 +180,19 @@ def download_file(path):
             )
         
         # Если запрос для просмотра
-        response = send_file(
+        return send_file(
             file_path,
             mimetype='application/pdf'
         )
-        response.headers['Content-Type'] = 'application/pdf'
-        response.headers['Accept-Ranges'] = 'bytes'
-        response.headers['Access-Control-Allow-Origin'] = '*'
-        return response
         
     except Exception as e:
-        flash(g.translations['error_downloading'], 'error')
+        flash(g.translations.gettext('error_downloading'), 'error')
         return redirect(url_for('index'))
 
 @app.route('/favicon.ico')
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static', 'images'),
                              'favicon.ico', mimetype='image/vnd.microsoft.icon')
-
-# Функция для очистки старых файлов (можно вызывать периодически)
-def cleanup_old_files():
-    try:
-        current_time = datetime.now()
-        for filename in os.listdir(app.config['UPLOAD_FOLDER']):
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file_modified = datetime.fromtimestamp(os.path.getmtime(file_path))
-            if (current_time - file_modified).days > 1:  # Удаляем файлы старше 1 дня
-                os.remove(file_path)
-    except Exception as e:
-        print(f"Error cleaning up files: {str(e)}")
 
 @app.errorhandler(404)
 def page_not_found(e):

@@ -180,6 +180,13 @@ CONTRACT_TRANSLATIONS = {
         'validation_date': 'Дата не может быть раньше текущей',
         'error_server': 'Произошла внутренняя ошибка сервера. Пожалуйста, попробуйте позже.',
         'back_to_home': 'Вернуться на главную',
+        'generating_contract': 'Генерация договора',
+        'please_wait': 'Пожалуйста, подождите...',
+        'generation_taking_long': 'Генерация документа может занять некоторое время',
+        'preview_not_available': 'Предпросмотр недоступен на этом устройстве',
+        'download_to_view': 'Скачать для просмотра',
+        'preview_first_page': 'Предпросмотр первой страницы',
+        'view_full_document': 'Посмотреть полный документ',
     },
     'kk': {
         'meta_title': 'Kelistik - Келісімшарт генераторы',
@@ -373,5 +380,12 @@ CONTRACT_TRANSLATIONS = {
         'validation_current_length': 'Қазіргі мәтін ұзындығы: {length} таңба.',
         'error_server': 'Серверде ішкі қате пайда болды. Кейінірек қайталап көріңіз.',
         'back_to_home': 'Басты бетке оралу',
+        'generating_contract': 'Келісімшарт жасалуда',
+        'please_wait': 'Күте тұрыңыз...',
+        'generation_taking_long': 'Құжатты жасау біраз уақыт алуы мүмкін',
+        'preview_not_available': 'Бұл құрылғыда алдын ала қарау мүмкін емес',
+        'download_to_view': 'Қарау үшін жүктеп алыңыз',
+        'preview_first_page': 'Бірінші беттің алдын ала қарауы',
+        'view_full_document': 'Толық құжатты қарау',
     }
 } 

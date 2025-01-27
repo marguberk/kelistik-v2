@@ -114,16 +114,16 @@ class ContractForm(FlaskForm):
     # Данные услуги
     def get_service_choices():
         return [
-            ('web_design', g.translations.get('service_type_web')),
-            ('ui_ux', g.translations.get('service_type_ui')),
-            ('graphic_design', g.translations.get('service_type_graphic')),
-            ('programming', g.translations.get('service_type_programming')),
-            ('mobile_dev', g.translations.get('service_type_mobile')),
-            ('targeting', g.translations.get('service_type_targeting')),
-            ('seo', g.translations.get('service_type_seo')),
-            ('smm', g.translations.get('service_type_smm')),
-            ('copywriting', g.translations.get('service_type_copywriting')),
-            ('consulting', g.translations.get('service_type_consulting'))
+            ('web_design', g.translations.gettext('service_type_web')),
+            ('ui_design', g.translations.gettext('service_type_ui')),
+            ('graphic_design', g.translations.gettext('service_type_graphic')),
+            ('programming', g.translations.gettext('service_type_programming')),
+            ('mobile_dev', g.translations.gettext('service_type_mobile')),
+            ('targeting', g.translations.gettext('service_type_targeting')),
+            ('seo', g.translations.gettext('service_type_seo')),
+            ('smm', g.translations.gettext('service_type_smm')),
+            ('copywriting', g.translations.gettext('service_type_copywriting')),
+            ('consulting', g.translations.gettext('service_type_consulting'))
         ]
 
     def get_prepayment_choices():

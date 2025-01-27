@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto text-center">
+    <h1 class="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
+        {{ t.gettext('generating_contract') }}
+    </h1>
+    
+    <div class="animate-pulse flex flex-col items-center">
+        <div class="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p class="text-gray-600 dark:text-gray-400">
+            {{ t.gettext('please_wait') }}
+        </p>
+    </div>
+</div>
+
+<script>
+    // Перезагрузка страницы каждые 3 секунды
+    setTimeout(function() {
+        window.location.reload();
+    }, 3000);
+</script>
+{% endblock %} 

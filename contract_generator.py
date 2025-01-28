@@ -130,7 +130,13 @@ def generate_contract(data, lang):
         
         # Создаем PDF
         filename = f'contract_{contract_number}.pdf'
-        filepath = os.path.join('static/contracts', filename)
+        
+        # Используем абсолютный путь к папке проекта
+        project_dir = os.path.dirname(os.path.abspath(__file__))
+        filepath = os.path.join(project_dir, 'static', 'contracts', filename)
+        
+        # Убедимся, что директория существует
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
         
         doc = SimpleDocTemplate(
             filepath,
@@ -360,7 +366,15 @@ def get_service_type_name(service_type, lang='ru'):
     service_types = {
         'web_design': translations['service_type_web'],
         'ui_ux': translations['service_type_ui'],
-        'graphic_design': translations['service_type_graphic']
+        'graphic_design': translations['service_type_graphic'],
+        'programming': translations['service_type_programming'],
+        'website': translations['service_type_website'],
+        'mobile_dev': translations['service_type_mobile'],
+        'targeting': translations['service_type_targeting'],
+        'seo': translations['service_type_seo'],
+        'smm': translations['service_type_smm'],
+        'copywriting': translations['service_type_copywriting'],
+        'consulting': translations['service_type_consulting']
     }
     return service_types.get(service_type, service_type)
 

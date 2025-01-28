@@ -8,13 +8,13 @@ from datetime import date, datetime
 class PhoneNumberValidator:
     def __call__(self, form, field):
         number = ''.join(c for c in field.data if c.isdigit() or c == '+')
-        
+
         if not number.startswith('+7'):
             raise ValidationError(g.translations['validation_phone_start'])
-            
+
         if len(number) != 12:
             raise ValidationError(g.translations['validation_phone_length'])
-        
+
         if not number[2:].isdigit():
             raise ValidationError(g.translations['validation_phone_digits'])
 
@@ -30,14 +30,14 @@ class ContractForm(FlaskForm):
             DataRequired(),
             Length(min=2, max=100)
         ])
-    
+
     contractor_iin = StringField(
         validators=[
             DataRequired(message=''),
             Length(min=12, max=12, message=''),
             Regexp(r'^\d{12}$', message='')
         ])
-    
+
     def validate_contractor_iin(form, field):
         is_valid, _ = validate_iin_bin(field.data)
         if not is_valid or len(field.data) != 12:
@@ -45,72 +45,65 @@ class ContractForm(FlaskForm):
                 raise ValidationError('ИИН должен содержать 12 цифр')
             else:
                 raise ValidationError('ЖСН 12 саннан тұруы керек')
-    
-    contractor_phone = StringField('Телефон Исполнителя', 
+
+    contractor_phone = StringField('Телефон Исполнителя',
         render_kw={"type": "tel"},
         validators=[
             DataRequired(),
             PhoneNumberValidator()
         ])
-    
+
     contractor_address = StringField(
         validators=[
             DataRequired(),
             Length(min=10, max=200)
         ])
-    
+
     contractor_bank = StringField(
         validators=[
             DataRequired()
         ])
-    
+
     contractor_iban = StringField(
+        'contractor_iban',
         validators=[
-            DataRequired(message=''),
-            Length(min=20, max=20, message=''),
-            Regexp(r'^[A-Z]{2}\d{18}$', message='')
-        ])
-    
-    def validate_contractor_iban(form, field):
-        is_valid, _ = validate_iban(field.data)
-        if not is_valid or not field.data.startswith('KZ') or len(field.data) != 20:
-            if g.lang == 'ru':
-                raise ValidationError('Формат: KZXXXXXXXXXXXXXXXXXX')
-            else:
-                raise ValidationError('IBAN форматы: KZXXXXXXXXXXXXXXXXXX')
-    
+        DataRequired(message='Это поле обязательно')
+            # Убираем все остальные валидаторы для IBAN
+        ]
+    )
+
     # Данные заказчика
     client_name = StringField(
         validators=[
             DataRequired(),
             Length(min=2, max=100)
         ])
-    
+
     def validate_client_iin(form, field):
         is_valid, message = validate_iin_bin(field.data)
         if not is_valid:
             raise ValidationError(message)
-    
+
     client_iin = StringField(
         validators=[
             DataRequired(),
             Length(min=12, max=12),
             Regexp(r'^\d{12}$')
         ])
-    
-    client_phone = StringField('Телефон Заказчика', 
+
+    client_phone = StringField('Телефон Заказчика',
         render_kw={"type": "tel"},
         validators=[
             DataRequired(),
             PhoneNumberValidator()
         ])
-    
+
     client_address = StringField(
         validators=[
             DataRequired(),
             Length(min=10, max=200)
         ])
-    
+
     # Данные услуги
     def get_service_choices():
         return [
@@ -118,6 +111,7 @@ class ContractForm(FlaskForm):
             ('ui_design', g.translations.gettext('service_type_ui')),
             ('graphic_design', g.translations.gettext('service_type_graphic')),
             ('programming', g.translations.gettext('service_type_programming')),
+            ('website', g.translations.gettext('service_type_website')),
             ('mobile_dev', g.translations.gettext('service_type_mobile')),
             ('targeting', g.translations.gettext('service_type_targeting')),
             ('seo', g.translations.gettext('service_type_seo')),
@@ -174,20 +168,20 @@ class ContractForm(FlaskForm):
             "class": "whitespace-pre-wrap"
         }
     )
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if hasattr(g, 'translations'):
             # Плейсхолдер для описания услуг
             self.service_description.render_kw["placeholder"] = g.translations['service_description_placeholder']
-            
+
             # Дата - формат в зависимости от языка
             date_format = "дд.мм.гггг" if g.lang == 'ru' else "кк.аа.жжжж"
             self.deadline.render_kw = {
                 "type": "date",
                 "placeholder": date_format
             }
-            
+
             # Устанавливаем сообщения валидации только для полей, которые не имеют custom validators
             for field in self._fields.values():
                 for validator in field.validators:
@@ -198,7 +192,7 @@ class ContractForm(FlaskForm):
                             validator.message = g.translations['validation_name_length']
                         elif field.name == 'service_description':
                             validator.message = g.translations['validation_description_length']
-    
+
     # Условия договора
     price = DecimalField(
         validators=[
@@ -210,12 +204,12 @@ class ContractForm(FlaskForm):
         validators=[
             DataRequired(),
         ])
-    
+
     def validate_deadline(self, field):
         if field.data < datetime.now().date():
             raise ValidationError(g.translations['validation_date'])
         return True
-    
+
     # Дополнительные условия
     revisions_count = SelectField('Количество правок', choices=get_revisions_choices, validators=[DataRequired()])
     intellectual_rights = SelectField('Права на результаты работ', choices=get_rights_choices, validators=[DataRequired()])
@@ -223,6 +217,6 @@ class ContractForm(FlaskForm):
     client_delay_days = SelectField('Допустимая задержка', choices=get_delay_choices)
 
     # Удаляем остальные поля задержек и штрафов
-    # contractor_delay_penalty и contractor_max_penalty больше не нужны 
+    # contractor_delay_penalty и contractor_max_penalty больше не нужны
 
-    # ... остальные методы ... 
+    # ... остальные методы ...

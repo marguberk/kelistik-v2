@@ -44,6 +44,7 @@ CONTRACT_TRANSLATIONS = {
         'service_type_ui': 'UI/UX дизайн',
         'service_type_graphic': 'Графический дизайн',
         'service_type_programming': 'Разработка программного обеспечения',
+        'service_type_website': 'Разработка сайта',
         'service_type_mobile': 'Разработка мобильных приложений',
         'service_type_targeting': 'Таргетированная реклама',
         'service_type_seo': 'SEO-оптимизация',
@@ -233,6 +234,7 @@ CONTRACT_TRANSLATIONS = {
         'service_type_ui': 'UI/UX дизайн',
         'service_type_graphic': 'Графикалық дизайн',
         'service_type_programming': 'Бағдарламалық жасақтама әзірлеу',
+        'service_type_website': 'Сайт әзірлеу',
         'service_type_mobile': 'Мобильді қосымшаларды әзірлеу',
         'service_type_targeting': 'Таргеттелген жарнама',
         'service_type_seo': 'SEO-оңтайландыру',
@@ -388,4 +390,4 @@ CONTRACT_TRANSLATIONS = {
         'preview_first_page': 'Бірінші беттің алдын ала қарауы',
         'view_full_document': 'Толық құжатты қарау',
     }
-} 
+}
